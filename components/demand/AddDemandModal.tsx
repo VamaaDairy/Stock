@@ -33,30 +33,54 @@ export default function AddDemandModal({
   const pcsPerCrt = product.pcsPerCrt || 1
 
   const [batchNumber, setBatchNumber] = useState(product.batchNumber ?? "B1")
+  const [demPc, setDemPc] = useState(
+    product.demand.pc > 0
+      ? String(product.demand.pc)
+      : product.demand.crt > 0 && pcsPerCrt > 1
+      ? String(product.demand.crt * pcsPerCrt)
+      : String(product.demand.total || "")
+  )
   const [demCrt, setDemCrt] = useState(String(product.demand.crt || ""))
-  const [demPc, setDemPc] = useState(String(product.demand.pc || ""))
   const [demTotal, setDemTotal] = useState(String(product.demand.total || ""))
 
-  const calcTotalFromParts = (crtStr: string, pcStr: string) => {
-    const crt = parseFloat(crtStr) || 0
-    const pc = parseFloat(pcStr) || 0
+  // Smallest unit (Pcs) input handler with auto-conversion to Crt
+  const handlePcsChange = (pcsVal: string) => {
+    setDemPc(pcsVal)
+    const pcs = parseFloat(pcsVal) || 0
+    if (pcs === 0) {
+      setDemCrt("0")
+      setDemTotal("0")
+      return
+    }
+
     if (product.unit === "PCS" || product.unit === "KG") {
-      return Number((crt + pc).toFixed(4))
+      setDemCrt(String(pcs))
+      setDemTotal(String(pcs))
+    } else if (pcsPerCrt > 1) {
+      const crtVal = Number((pcs / pcsPerCrt).toFixed(4))
+      setDemCrt(String(crtVal))
+      setDemTotal(String(crtVal))
+    } else {
+      setDemCrt(String(pcs))
+      setDemTotal(String(pcs))
     }
-    if (pcsPerCrt > 1) {
-      return Number((crt + pc / pcsPerCrt).toFixed(4))
-    }
-    return Number(crt.toFixed(4))
   }
 
-  const handleDemCrtChange = (val: string) => {
-    setDemCrt(val)
-    setDemTotal(String(calcTotalFromParts(val, demPc)))
-  }
-
-  const handleDemPcChange = (val: string) => {
-    setDemPc(val)
-    setDemTotal(String(calcTotalFromParts(demCrt, val)))
+  // Crt input handler (manual override if needed)
+  const handleCrtChange = (crtVal: string) => {
+    setDemCrt(crtVal)
+    const crt = parseFloat(crtVal) || 0
+    if (product.unit === "PCS" || product.unit === "KG") {
+      setDemPc(String(crt))
+      setDemTotal(String(crt))
+    } else if (pcsPerCrt > 1) {
+      const pcsVal = Math.round(crt * pcsPerCrt)
+      setDemPc(String(pcsVal))
+      setDemTotal(String(crt))
+    } else {
+      setDemPc(String(crt))
+      setDemTotal(String(crt))
+    }
   }
 
   async function handleSubmit() {
@@ -108,7 +132,7 @@ export default function AddDemandModal({
             Demand Entry: {product.name}
           </DialogTitle>
           <DialogDescription className="text-xs font-bold text-neutral-700 flex items-center justify-between flex-wrap gap-2">
-            <span>Date: {date} · Unit: {product.unit}</span>
+            <span>Date: {date} · Tally Unit: {product.unit}</span>
             {pcsPerCrt > 1 && (
               <Badge variant="outline" className="border-black text-black font-mono text-[10px]">
                 1 {product.unit} = {pcsPerCrt} Pcs
@@ -129,25 +153,46 @@ export default function AddDemandModal({
             />
           </div>
 
-          {/* Daily Customer Demand */}
-          <div className="space-y-1.5">
-            <Label className="text-xs font-black text-black uppercase tracking-wider">
-              Daily Order Demand Quantity
+          {/* Smallest Unit Entry with Auto-Conversion */}
+          <div className="space-y-2 bg-neutral-50 p-3 rounded-xl border border-black">
+            <Label className="text-xs font-black text-black uppercase tracking-wider block">
+              Enter Demand Quantity (Smallest Unit: Pcs)
             </Label>
-            <div className="grid grid-cols-3 gap-2">
-              <div>
-                <Input className="h-11 text-base border-black text-black font-semibold" placeholder={product.unit} value={demCrt} onChange={e => handleDemCrtChange(e.target.value)} />
-                <p className="text-[11px] font-medium text-neutral-600 text-center mt-0.5">{product.unit}</p>
-              </div>
-              <div>
-                <Input className="h-11 text-base border-black text-black font-semibold" placeholder="Pc" value={demPc} onChange={e => handleDemPcChange(e.target.value)} />
-                <p className="text-[11px] font-medium text-neutral-600 text-center mt-0.5">Pc</p>
-              </div>
-              <div>
-                <Input className="h-11 text-base font-bold border-black text-black" placeholder="Total" value={demTotal} onChange={e => setDemTotal(e.target.value)} />
-                <p className="text-[11px] font-medium text-neutral-600 text-center mt-0.5">Total ({product.unit})</p>
-              </div>
+            
+            <div className="space-y-1.5">
+              <Label className="text-[11px] font-bold text-neutral-700">Smallest Unit (Pcs)</Label>
+              <Input
+                type="number"
+                className="h-11 text-lg font-black border-2 border-black text-black bg-white"
+                placeholder="Enter Pcs (e.g. 120)"
+                value={demPc}
+                onChange={e => handlePcsChange(e.target.value)}
+              />
             </div>
+
+            {/* Calculated Conversion Result */}
+            {pcsPerCrt > 1 && (
+              <div className="grid grid-cols-2 gap-2 pt-1 border-t border-neutral-300">
+                <div>
+                  <Label className="text-[11px] font-bold text-neutral-600">Calculated {product.unit} (Crt/Box)</Label>
+                  <Input
+                    type="number"
+                    className="h-9 text-sm font-bold border-black text-black bg-white"
+                    value={demCrt}
+                    onChange={e => handleCrtChange(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label className="text-[11px] font-bold text-neutral-600">Total Primary Qty ({product.unit})</Label>
+                  <Input
+                    type="number"
+                    className="h-9 text-sm font-black border-black text-black bg-neutral-100"
+                    value={demTotal}
+                    readOnly
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="bg-neutral-50 p-3 rounded-lg border border-black/20 text-xs space-y-1">

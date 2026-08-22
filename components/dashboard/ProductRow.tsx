@@ -1,7 +1,6 @@
 "use client"
 
 import { Badge } from "@/components/ui/badge"
-import AddEntryModal from "./AddEntryModal"
 import type { Product } from "./types"
 
 export default function ProductRow({
@@ -62,8 +61,8 @@ export default function ProductRow({
               {getExpiryBadge()}
             </>
           ) : (
-            <Badge variant="outline" className="text-xs font-medium border-black text-black bg-white">
-              No entry yet
+            <Badge variant="outline" className="text-xs font-medium border-neutral-300 text-neutral-500 bg-white">
+              No entry for date
             </Badge>
           )}
         </div>
@@ -97,11 +96,6 @@ export default function ProductRow({
           <div className="h-full bg-neutral-400 transition-all duration-300" style={{ width: `${salePct}%` }} />
           <div className="h-full bg-black transition-all duration-300" style={{ width: `${closingPct}%` }} />
         </div>
-      </div>
-
-      {/* Entry Action */}
-      <div className="flex-shrink-0">
-        <AddEntryModal product={product} date={date} onSaved={onSaved} />
       </div>
     </div>
   )

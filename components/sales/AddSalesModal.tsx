@@ -33,31 +33,55 @@ export default function AddSalesModal({
   const pcsPerCrt = product.pcsPerCrt || 1
 
   const [batchNumber, setBatchNumber] = useState(product.batchNumber ?? "B1")
+  const [salePc, setSalePc] = useState(
+    product.sale.pc > 0
+      ? String(product.sale.pc)
+      : product.sale.crt > 0 && pcsPerCrt > 1
+      ? String(product.sale.crt * pcsPerCrt)
+      : String(product.sale.total || "")
+  )
   const [saleCrt, setSaleCrt] = useState(String(product.sale.crt || ""))
-  const [salePc, setSalePc] = useState(String(product.sale.pc || ""))
   const [saleTotal, setSaleTotal] = useState(String(product.sale.total || ""))
   const [salesTarget, setSalesTarget] = useState(String(product.salesTarget || ""))
 
-  const calcTotalFromParts = (crtStr: string, pcStr: string) => {
-    const crt = parseFloat(crtStr) || 0
-    const pc = parseFloat(pcStr) || 0
+  // Smallest unit (Pcs) input handler with auto-conversion to Crt
+  const handlePcsChange = (pcsVal: string) => {
+    setSalePc(pcsVal)
+    const pcs = parseFloat(pcsVal) || 0
+    if (pcs === 0) {
+      setSaleCrt("0")
+      setSaleTotal("0")
+      return
+    }
+
     if (product.unit === "PCS" || product.unit === "KG") {
-      return Number((crt + pc).toFixed(4))
+      setSaleCrt(String(pcs))
+      setSaleTotal(String(pcs))
+    } else if (pcsPerCrt > 1) {
+      const crtVal = Number((pcs / pcsPerCrt).toFixed(4))
+      setSaleCrt(String(crtVal))
+      setSaleTotal(String(crtVal))
+    } else {
+      setSaleCrt(String(pcs))
+      setSaleTotal(String(pcs))
     }
-    if (pcsPerCrt > 1) {
-      return Number((crt + pc / pcsPerCrt).toFixed(4))
-    }
-    return Number(crt.toFixed(4))
   }
 
-  const handleSaleCrtChange = (val: string) => {
-    setSaleCrt(val)
-    setSaleTotal(String(calcTotalFromParts(val, salePc)))
-  }
-
-  const handleSalePcChange = (val: string) => {
-    setSalePc(val)
-    setSaleTotal(String(calcTotalFromParts(saleCrt, val)))
+  // Crt input handler (manual override if needed)
+  const handleCrtChange = (crtVal: string) => {
+    setSaleCrt(crtVal)
+    const crt = parseFloat(crtVal) || 0
+    if (product.unit === "PCS" || product.unit === "KG") {
+      setSalePc(String(crt))
+      setSaleTotal(String(crt))
+    } else if (pcsPerCrt > 1) {
+      const pcsVal = Math.round(crt * pcsPerCrt)
+      setSalePc(String(pcsVal))
+      setSaleTotal(String(crt))
+    } else {
+      setSalePc(String(crt))
+      setSaleTotal(String(crt))
+    }
   }
 
   async function handleSubmit() {
@@ -109,7 +133,7 @@ export default function AddSalesModal({
             Sales Out Entry: {product.name}
           </DialogTitle>
           <DialogDescription className="text-xs font-bold text-neutral-700 flex items-center justify-between flex-wrap gap-2">
-            <span>Date: {date} · Unit: {product.unit}</span>
+            <span>Date: {date} · Tally Unit: {product.unit}</span>
             {pcsPerCrt > 1 && (
               <Badge variant="outline" className="border-black text-black font-mono text-[10px]">
                 1 {product.unit} = {pcsPerCrt} Pcs
@@ -130,25 +154,46 @@ export default function AddSalesModal({
             />
           </div>
 
-          {/* Daily Warehouse Dispatches */}
-          <div className="space-y-1.5">
-            <Label className="text-xs font-black text-black uppercase tracking-wider">
-              Daily Sales Out (Actual Dispatches)
+          {/* Smallest Unit Entry with Auto-Conversion */}
+          <div className="space-y-2 bg-neutral-50 p-3 rounded-xl border border-black">
+            <Label className="text-xs font-black text-black uppercase tracking-wider block">
+              Enter Sales Out Quantity (Smallest Unit: Pcs)
             </Label>
-            <div className="grid grid-cols-3 gap-2">
-              <div>
-                <Input className="h-11 text-base border-black text-black font-semibold" placeholder={product.unit} value={saleCrt} onChange={e => handleSaleCrtChange(e.target.value)} />
-                <p className="text-[11px] font-medium text-neutral-600 text-center mt-0.5">{product.unit}</p>
-              </div>
-              <div>
-                <Input className="h-11 text-base border-black text-black font-semibold" placeholder="Pc" value={salePc} onChange={e => handleSalePcChange(e.target.value)} />
-                <p className="text-[11px] font-medium text-neutral-600 text-center mt-0.5">Pc</p>
-              </div>
-              <div>
-                <Input className="h-11 text-base font-bold border-black text-black" placeholder="Total" value={saleTotal} onChange={e => setSaleTotal(e.target.value)} />
-                <p className="text-[11px] font-medium text-neutral-600 text-center mt-0.5">Total ({product.unit})</p>
-              </div>
+            
+            <div className="space-y-1.5">
+              <Label className="text-[11px] font-bold text-neutral-700">Smallest Unit (Pcs)</Label>
+              <Input
+                type="number"
+                className="h-11 text-lg font-black border-2 border-black text-black bg-white"
+                placeholder="Enter Pcs (e.g. 120)"
+                value={salePc}
+                onChange={e => handlePcsChange(e.target.value)}
+              />
             </div>
+
+            {/* Calculated Conversion Result */}
+            {pcsPerCrt > 1 && (
+              <div className="grid grid-cols-2 gap-2 pt-1 border-t border-neutral-300">
+                <div>
+                  <Label className="text-[11px] font-bold text-neutral-600">Calculated {product.unit} (Crt/Box)</Label>
+                  <Input
+                    type="number"
+                    className="h-9 text-sm font-bold border-black text-black bg-white"
+                    value={saleCrt}
+                    onChange={e => handleCrtChange(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label className="text-[11px] font-bold text-neutral-600">Total Primary Qty ({product.unit})</Label>
+                  <Input
+                    type="number"
+                    className="h-9 text-sm font-black border-black text-black bg-neutral-100"
+                    value={saleTotal}
+                    readOnly
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Sales Target */}
