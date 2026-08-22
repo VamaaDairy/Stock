@@ -65,8 +65,6 @@ export default function AddEntryModal({
   const [salePc, setSalePc] = useState(String(product.sale.pc || ""))
   const [saleTotal, setSaleTotal] = useState(String(product.sale.total || ""))
 
-  const [salesTarget, setSalesTarget] = useState(String(product.salesTarget || ""))
-
   // Auto conversion helpers
   const calcTotalFromParts = (crtStr: string, pcStr: string) => {
     const crt = parseFloat(crtStr) || 0
@@ -166,7 +164,6 @@ export default function AddEntryModal({
           production: { crt: Number(prodCrt) || 0, pc: Number(prodPc) || 0, total: Number(prodTotal) || 0 },
           demand: { crt: Number(demCrt) || 0, pc: Number(demPc) || 0, total: Number(demTotal) || 0 },
           sale: { crt: Number(saleCrt) || 0, pc: Number(salePc) || 0, total: Number(saleTotal) || 0 },
-          salesTarget: Number(salesTarget) || 0,
         }),
       })
       const json = await res.json()
@@ -331,12 +328,6 @@ export default function AddEntryModal({
                 <p className="text-[11px] font-medium text-neutral-600 text-center mt-0.5">Total ({product.unit})</p>
               </div>
             </div>
-          </div>
-
-          {/* Sales Target */}
-          <div className="space-y-1">
-            <Label className="text-sm font-bold text-black">Sales Target ({product.unit})</Label>
-            <Input className="h-11 text-base border-neutral-300 text-black font-semibold" value={salesTarget} onChange={e => setSalesTarget(e.target.value)} placeholder="0" />
           </div>
 
           {error && <p className="text-sm text-red-600 font-semibold p-2 rounded bg-red-50">{error}</p>}

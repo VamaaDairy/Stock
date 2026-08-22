@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
+import { generateDairyBatchCode } from "@/lib/utils/batch"
 import type { Product } from "@/components/dashboard/types"
 
 export default function AddSalesModal({
@@ -30,8 +31,13 @@ export default function AddSalesModal({
   const [error, setError] = useState<string | null>(null)
 
   const pcsPerCrt = product.pcsPerCrt || 1
+  const totalAvailable = product.opening.total + product.production.total
 
-  const [batchNumber, setBatchNumber] = useState(product.batchNumber ?? "B1")
+  const defaultBatch = product.batchNumber && product.batchNumber !== "B1"
+    ? product.batchNumber
+    : generateDairyBatchCode(date, product.skuCode, (product as any).category, product.name)
+
+  const [batchNumber, setBatchNumber] = useState(defaultBatch)
   const [salePc, setSalePc] = useState(
     product.sale.pc > 0
       ? String(product.sale.pc)
@@ -41,7 +47,17 @@ export default function AddSalesModal({
   )
   const [saleCrt, setSaleCrt] = useState(String(product.sale.crt || ""))
   const [saleTotal, setSaleTotal] = useState(String(product.sale.total || ""))
-  const [salesTarget, setSalesTarget] = useState(String(product.salesTarget || ""))
+
+  // Helper to validate sale total against total available stock
+  const validateSaleStock = (saleVal: number) => {
+    if (saleVal > totalAvailable) {
+      setError(`⚠️ CANNOT DISPATCH: Entered Sale Out (${saleVal} ${product.unit}) exceeds Total Available Stock (${totalAvailable} ${product.unit}).`)
+      return false
+    } else {
+      setError(null)
+      return true
+    }
+  }
 
   // Smallest unit (Pcs) input handler with auto-conversion to Crt
   const handlePcsChange = (pcsVal: string) => {
@@ -50,26 +66,35 @@ export default function AddSalesModal({
     if (pcs === 0) {
       setSaleCrt("0")
       setSaleTotal("0")
+      setError(null)
       return
     }
 
+    let calculatedTotal = pcs
     if (product.unit === "PCS" || product.unit === "KG") {
       setSaleCrt(String(pcs))
       setSaleTotal(String(pcs))
+      calculatedTotal = pcs
     } else if (pcsPerCrt > 1) {
       const crtVal = Number((pcs / pcsPerCrt).toFixed(4))
       setSaleCrt(String(crtVal))
       setSaleTotal(String(crtVal))
+      calculatedTotal = crtVal
     } else {
       setSaleCrt(String(pcs))
       setSaleTotal(String(pcs))
+      calculatedTotal = pcs
     }
+
+    validateSaleStock(calculatedTotal)
   }
 
   // Crt input handler (manual override if needed)
   const handleCrtChange = (crtVal: string) => {
     setSaleCrt(crtVal)
     const crt = parseFloat(crtVal) || 0
+    let calculatedTotal = crt
+
     if (product.unit === "PCS" || product.unit === "KG") {
       setSalePc(String(crt))
       setSaleTotal(String(crt))
@@ -81,11 +106,28 @@ export default function AddSalesModal({
       setSalePc(String(crt))
       setSaleTotal(String(crt))
     }
+
+    validateSaleStock(calculatedTotal)
   }
 
   async function handleSubmit() {
     setSaving(true)
     setError(null)
+
+    const enteredSale = Number(saleTotal) || 0
+
+    if (enteredSale > totalAvailable) {
+      setError(`⚠️ SALE VERIFICATION FAILED: Cannot dispatch ${enteredSale} ${product.unit}. Total Available Stock is only ${totalAvailable} ${product.unit}.`)
+      setSaving(false)
+      return
+    }
+
+    if (!batchNumber.trim()) {
+      setError("Batch Number / Code is required.")
+      setSaving(false)
+      return
+    }
+
     try {
       const res = await fetch("/api/metrics", {
         method: "POST",
@@ -94,15 +136,14 @@ export default function AddSalesModal({
           productId: product.id,
           date,
           skuCode: product.skuCode,
-          batchNumber,
+          batchNumber: batchNumber.trim(),
           manufacturingDate: product.manufacturingDate,
           ubd: product.ubd,
           expiryDate: product.expiryDate,
           shelfLifeDays: product.shelfLifeDays,
           production: product.production,
           demand: product.demand,
-          sale: { crt: Number(saleCrt) || 0, pc: Number(salePc) || 0, total: Number(saleTotal) || 0 },
-          salesTarget: Number(salesTarget) || 0,
+          sale: { crt: Number(saleCrt) || 0, pc: Number(salePc) || 0, total: enteredSale },
         }),
       })
       const json = await res.json()
@@ -137,6 +178,12 @@ export default function AddSalesModal({
         </DialogHeader>
 
         <div className="space-y-4 py-2 text-black">
+          {/* Available Stock Verification Banner */}
+          <div className="bg-neutral-100 p-3 rounded-lg border border-neutral-300 text-xs flex justify-between items-center">
+            <span className="font-bold uppercase tracking-wider text-neutral-600">Available Stock Verification:</span>
+            <span className="font-black text-sm text-black">{totalAvailable.toLocaleString()} {product.unit}</span>
+          </div>
+
           {/* Batch Code Field */}
           <div>
             <Label className="text-xs font-bold text-black">Batch Number / Code</Label>
@@ -144,7 +191,7 @@ export default function AddSalesModal({
               className="h-10 text-sm mt-1 border-neutral-300 bg-white text-black font-mono font-bold"
               value={batchNumber}
               onChange={e => setBatchNumber(e.target.value)}
-              placeholder="e.g. AA19HIM"
+              placeholder="e.g. AH221003"
             />
           </div>
 
@@ -190,26 +237,15 @@ export default function AddSalesModal({
             )}
           </div>
 
-          {/* Sales Target */}
-          <div className="space-y-1">
-            <Label className="text-xs font-bold text-black">Sales Target ({product.unit})</Label>
-            <Input className="h-11 text-base border-neutral-300 text-black font-semibold" value={salesTarget} onChange={e => setSalesTarget(e.target.value)} placeholder="0" />
-          </div>
-
-          <div className="bg-neutral-50 p-3 rounded-lg border border-neutral-200 text-xs space-y-1">
-            <p className="font-bold text-black">Stock Impact Note:</p>
-            <p className="text-neutral-600 font-semibold">Sales entry reduces closing stock balance directly.</p>
-          </div>
-
-          {error && <p className="text-sm text-red-600 font-semibold p-2 rounded bg-red-50">{error}</p>}
+          {error && <p className="text-xs text-red-600 font-bold p-2.5 rounded bg-red-50 border border-red-200">{error}</p>}
         </div>
 
         <DialogFooter>
           <Button
             size="lg"
-            className="w-full text-base font-bold bg-white text-black border border-neutral-300 hover:bg-neutral-100 rounded-lg shadow-xs"
+            className="w-full text-base font-bold bg-white text-black border border-neutral-300 hover:bg-neutral-100 rounded-lg shadow-xs disabled:opacity-50"
             onClick={handleSubmit}
-            disabled={saving}
+            disabled={saving || (Number(saleTotal) > totalAvailable)}
           >
             {saving ? "Saving..." : "Save Sales Entry"}
           </Button>

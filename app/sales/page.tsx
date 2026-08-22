@@ -151,7 +151,6 @@ export default function SalesPage() {
                   <th className="py-3.5 px-4 text-right">Sale Crt</th>
                   <th className="py-3.5 px-4 text-right">Sale Pc</th>
                   <th className="py-3.5 px-4 text-right font-black">Total Sales Out</th>
-                  <th className="py-3.5 px-4 text-right">Sales Target</th>
                   <th className="py-3.5 px-4 text-right font-bold">Remaining Stock</th>
                   <th className="py-3.5 px-4 text-center">Action</th>
                 </tr>
@@ -187,7 +186,6 @@ export default function SalesPage() {
                     <td className="py-3 px-4 text-right font-black text-base">
                       {p.sale.total.toLocaleString()} {p.unit}
                     </td>
-                    <td className="py-3 px-4 text-right font-semibold">{p.salesTarget ? `${p.salesTarget.toLocaleString()} ${p.unit}` : "—"}</td>
                     <td className="py-3 px-4 text-right font-black text-base">
                       {p.currentStock.toLocaleString()} {p.unit}
                     </td>

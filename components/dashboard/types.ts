@@ -22,7 +22,7 @@ export interface Product {
   demand: Qty
   sale: Qty
   closing: Qty
-  salesTarget: number
+  salesTarget?: number
   currentStock: number
 }
 

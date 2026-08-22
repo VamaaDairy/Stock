@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import {
   Dialog,
   DialogContent,
@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
+import { generateDairyBatchCode } from "@/lib/utils/batch"
 import type { Product } from "@/components/dashboard/types"
 
 function computeExpiryDate(mfgDateStr: string, shelfLifeStr: string): string {
@@ -44,8 +45,11 @@ export default function AddProductionModal({
   const initialMfg = product.manufacturingDate ?? date
   const initialShelfLife = String(product.shelfLifeDays ?? 0)
   const initialExpiry = product.expiryDate ?? computeExpiryDate(initialMfg, initialShelfLife)
+  const defaultBatch = product.batchNumber && product.batchNumber !== "B1"
+    ? product.batchNumber
+    : generateDairyBatchCode(initialMfg, product.skuCode, (product as any).category, product.name)
 
-  const [batchNumber, setBatchNumber] = useState(product.batchNumber ?? "B1")
+  const [batchNumber, setBatchNumber] = useState(defaultBatch)
   const [mfgDate, setMfgDate] = useState(initialMfg)
   const [shelfLifeDays, setShelfLifeDays] = useState(initialShelfLife)
   const [expiryDate, setExpiryDate] = useState(initialExpiry)
@@ -61,13 +65,16 @@ export default function AddProductionModal({
   const [prodCrt, setProdCrt] = useState(String(product.production.crt || ""))
   const [prodTotal, setProdTotal] = useState(String(product.production.total || ""))
 
-  // Auto-recalculate Expiry whenever mfgDate or shelfLifeDays change
+  // Auto-recalculate Expiry & Batch Code whenever mfgDate or shelfLifeDays change
   const handleMfgDateChange = (newMfg: string) => {
     setMfgDate(newMfg)
     const calcExp = computeExpiryDate(newMfg, shelfLifeDays)
     if (calcExp) {
       setExpiryDate(calcExp)
       setUbd(calcExp)
+    }
+    if (!product.batchNumber || product.batchNumber === "B1") {
+      setBatchNumber(generateDairyBatchCode(newMfg, product.skuCode, (product as any).category, product.name))
     }
   }
 
@@ -136,6 +143,13 @@ export default function AddProductionModal({
   async function handleSubmit() {
     setSaving(true)
     setError(null)
+
+    if (!batchNumber.trim()) {
+      setError("Batch Number / Code is required.")
+      setSaving(false)
+      return
+    }
+
     try {
       const res = await fetch("/api/metrics", {
         method: "POST",
@@ -144,7 +158,7 @@ export default function AddProductionModal({
           productId: product.id,
           date,
           skuCode: product.skuCode,
-          batchNumber,
+          batchNumber: batchNumber.trim(),
           manufacturingDate: mfgDate,
           ubd: ubd || expiryDate || null,
           expiryDate: expiryDate || null,
@@ -152,7 +166,6 @@ export default function AddProductionModal({
           production: { crt: Number(prodCrt) || 0, pc: Number(prodPc) || 0, total: Number(prodTotal) || 0 },
           demand: product.demand,
           sale: product.sale,
-          salesTarget: product.salesTarget,
         }),
       })
       const json = await res.json()
@@ -190,12 +203,12 @@ export default function AddProductionModal({
           {/* Batch Code & Mfg Date */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label className="text-xs font-bold text-neutral-700">Batch Number / Code</Label>
+              <Label className="text-xs font-bold text-neutral-700">Batch Number / Code (Auto-generated)</Label>
               <Input
                 className="h-10 text-sm mt-1 border-neutral-300 bg-white text-black font-mono font-bold"
                 value={batchNumber}
                 onChange={e => setBatchNumber(e.target.value)}
-                placeholder="e.g. AA19HIM"
+                placeholder="e.g. AH221003"
               />
             </div>
             <div>

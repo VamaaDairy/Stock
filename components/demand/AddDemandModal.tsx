@@ -100,7 +100,6 @@ export default function AddDemandModal({
           production: product.production,
           demand: { crt: Number(demCrt) || 0, pc: Number(demPc) || 0, total: Number(demTotal) || 0 },
           sale: product.sale,
-          salesTarget: product.salesTarget,
         }),
       })
       const json = await res.json()
