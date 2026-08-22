@@ -10,11 +10,10 @@ import {
   DialogFooter,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Button, buttonVariants } from "@/components/ui/button"
+import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { cn } from "@/lib/utils"
 import type { Product } from "@/components/dashboard/types"
 
 export default function AddDemandModal({
@@ -118,15 +117,10 @@ export default function AddDemandModal({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger
-        className={cn(
-          buttonVariants({ size: "sm", variant: "outline" }),
-          "text-xs font-bold bg-white text-black border border-black hover:bg-neutral-100"
-        )}
-      >
+      <DialogTrigger className="h-8 px-3 text-xs font-semibold bg-black text-white hover:bg-neutral-800 border-none rounded-md transition-colors shadow-xs">
         {product.demand.total > 0 ? "Edit Demand" : "Add Demand"}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md bg-white text-black border-black">
+      <DialogContent className="sm:max-w-md bg-white text-black border-neutral-200">
         <DialogHeader>
           <DialogTitle className="text-xl font-black text-black">
             Demand Entry: {product.name}
@@ -146,7 +140,7 @@ export default function AddDemandModal({
           <div>
             <Label className="text-xs font-bold text-black">Batch Number / Code</Label>
             <Input
-              className="h-10 text-sm mt-1 border-black bg-white text-black font-mono font-bold"
+              className="h-10 text-sm mt-1 border-neutral-300 bg-white text-black font-mono font-bold"
               value={batchNumber}
               onChange={e => setBatchNumber(e.target.value)}
               placeholder="e.g. AA19HIM"
@@ -154,7 +148,7 @@ export default function AddDemandModal({
           </div>
 
           {/* Smallest Unit Entry with Auto-Conversion */}
-          <div className="space-y-2 bg-neutral-50 p-3 rounded-xl border border-black">
+          <div className="space-y-2 bg-neutral-50 p-3 rounded-xl border border-neutral-200">
             <Label className="text-xs font-black text-black uppercase tracking-wider block">
               Enter Demand Quantity (Smallest Unit: Pcs)
             </Label>
@@ -163,7 +157,7 @@ export default function AddDemandModal({
               <Label className="text-[11px] font-bold text-neutral-700">Smallest Unit (Pcs)</Label>
               <Input
                 type="number"
-                className="h-11 text-lg font-black border-2 border-black text-black bg-white"
+                className="h-11 text-lg font-bold border border-neutral-300 text-black bg-white"
                 placeholder="Enter Pcs (e.g. 120)"
                 value={demPc}
                 onChange={e => handlePcsChange(e.target.value)}
@@ -177,7 +171,7 @@ export default function AddDemandModal({
                   <Label className="text-[11px] font-bold text-neutral-600">Calculated {product.unit} (Crt/Box)</Label>
                   <Input
                     type="number"
-                    className="h-9 text-sm font-bold border-black text-black bg-white"
+                    className="h-9 text-sm font-bold border-neutral-300 text-black bg-white"
                     value={demCrt}
                     onChange={e => handleCrtChange(e.target.value)}
                   />
@@ -186,7 +180,7 @@ export default function AddDemandModal({
                   <Label className="text-[11px] font-bold text-neutral-600">Total Primary Qty ({product.unit})</Label>
                   <Input
                     type="number"
-                    className="h-9 text-sm font-black border-black text-black bg-neutral-100"
+                    className="h-9 text-sm font-black border-neutral-300 text-black bg-neutral-100"
                     value={demTotal}
                     readOnly
                   />
@@ -206,8 +200,7 @@ export default function AddDemandModal({
         <DialogFooter>
           <Button
             size="lg"
-            variant="outline"
-            className="w-full text-base font-bold bg-white text-black border-2 border-black hover:bg-neutral-100"
+            className="w-full text-base font-bold bg-black text-white hover:bg-neutral-800 border-none rounded-lg shadow-xs"
             onClick={handleSubmit}
             disabled={saving}
           >

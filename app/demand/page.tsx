@@ -70,7 +70,7 @@ export default function DemandPage() {
       <div className="max-w-6xl mx-auto w-full space-y-6">
         
         {/* Header & Date Selector */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-black shadow-xs">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-neutral-200 shadow-xs">
           <div>
             <h1 className="text-3xl font-black tracking-tight text-black flex items-center gap-2">
               <ShoppingCart className="h-8 w-8" />
@@ -90,7 +90,7 @@ export default function DemandPage() {
           <Search className="absolute left-3.5 top-3.5 h-4 w-4 text-black" />
           <Input
             placeholder="Search product name, SKU (e.g. 1011) or batch..."
-            className="pl-10 h-11 bg-white text-base rounded-xl border-black text-black placeholder:text-neutral-500"
+            className="pl-10 h-11 bg-white text-base rounded-xl border-neutral-300 text-black placeholder:text-neutral-500"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
           />
@@ -98,13 +98,13 @@ export default function DemandPage() {
 
         {/* Table */}
         {loading ? (
-          <div className="bg-white p-12 rounded-xl border border-black text-center text-black">
+          <div className="bg-white p-12 rounded-xl border border-neutral-200 text-center text-black">
             <p className="text-base font-semibold animate-pulse">Loading demand data...</p>
           </div>
         ) : (
-          <div className="border border-black rounded-xl overflow-hidden bg-white shadow-xs">
+          <div className="border border-neutral-200 rounded-xl overflow-hidden bg-white shadow-xs">
             <table className="w-full text-left text-sm">
-              <thead className="bg-neutral-100 text-black text-xs uppercase font-bold tracking-wider border-b border-black">
+              <thead className="bg-neutral-100 text-black text-xs uppercase font-bold tracking-wider border-b border-neutral-200">
                 <tr>
                   <th className="py-3.5 px-4">SKU Code</th>
                   <th className="py-3.5 px-4">Product Name</th>

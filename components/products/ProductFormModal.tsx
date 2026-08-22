@@ -97,8 +97,8 @@ export default function ProductFormModal({
       <DialogTrigger
         className={
           isEditing
-            ? "h-8 text-xs font-bold border border-black bg-white text-black hover:bg-neutral-100 px-3 rounded-md flex items-center gap-1"
-            : "h-10 px-4 font-bold border-2 border-black bg-white text-black hover:bg-neutral-100 rounded-md flex items-center gap-2"
+            ? "h-8 text-xs font-semibold bg-black text-white hover:bg-neutral-800 border-none px-3 rounded-md flex items-center gap-1 transition-colors shadow-xs"
+            : "h-10 px-4 font-bold bg-black text-white hover:bg-neutral-800 border-none rounded-md flex items-center gap-2 transition-colors shadow-xs"
         }
       >
         {isEditing ? (
@@ -112,7 +112,7 @@ export default function ProductFormModal({
         )}
       </DialogTrigger>
 
-      <DialogContent className="sm:max-w-md bg-white text-black border-black">
+      <DialogContent className="sm:max-w-md bg-white text-black border-neutral-200">
         <DialogHeader>
           <DialogTitle className="text-xl font-black text-black">
             {isEditing ? `Edit Product: ${product?.name}` : "Add New Product"}
@@ -124,7 +124,7 @@ export default function ProductFormModal({
           <div>
             <Label className="text-xs font-bold text-black">Product Name *</Label>
             <Input
-              className="h-10 text-sm mt-1 border-black bg-white text-black font-semibold"
+              className="h-10 text-sm mt-1 border-neutral-300 bg-white text-black font-semibold"
               value={name}
               onChange={e => setName(e.target.value)}
               placeholder="e.g. Gaia Toned Milk 500 ml"
@@ -136,7 +136,7 @@ export default function ProductFormModal({
             <div>
               <Label className="text-xs font-bold text-black">SKU Code *</Label>
               <Input
-                className="h-10 text-sm mt-1 border-black bg-white text-black font-mono font-bold"
+                className="h-10 text-sm mt-1 border-neutral-300 bg-white text-black font-mono font-bold"
                 value={skuCode}
                 onChange={e => setSkuCode(e.target.value)}
                 placeholder="e.g. 1003"
@@ -146,7 +146,7 @@ export default function ProductFormModal({
             <div>
               <Label className="text-xs font-bold text-black">Category *</Label>
               <select
-                className="h-10 text-sm mt-1 w-full border border-black rounded-md px-3 bg-white text-black font-semibold"
+                className="h-10 text-sm mt-1 w-full border border-neutral-300 rounded-md px-3 bg-white text-black font-semibold"
                 value={category}
                 onChange={e => setCategory(e.target.value)}
               >
@@ -164,7 +164,7 @@ export default function ProductFormModal({
             <div>
               <Label className="text-xs font-bold text-black">Tally Unit *</Label>
               <select
-                className="h-10 text-sm mt-1 w-full border border-black rounded-md px-3 bg-white text-black font-bold"
+                className="h-10 text-sm mt-1 w-full border border-neutral-300 rounded-md px-3 bg-white text-black font-bold"
                 value={unit}
                 onChange={e => {
                   setUnit(e.target.value)
@@ -184,7 +184,7 @@ export default function ProductFormModal({
               <Label className="text-xs font-bold text-black">Pcs per Crt/Box *</Label>
               <Input
                 type="number"
-                className="h-10 text-sm mt-1 border-black bg-white text-black font-bold"
+                className="h-10 text-sm mt-1 border-neutral-300 bg-white text-black font-bold"
                 value={pcsPerCrt}
                 onChange={e => setPcsPerCrt(e.target.value)}
                 placeholder="e.g. 60 or 1"
@@ -197,7 +197,7 @@ export default function ProductFormModal({
             <Label className="text-xs font-bold text-black">Default Shelf Life (Days)</Label>
             <Input
               type="number"
-              className="h-10 text-sm mt-1 border-black bg-white text-black font-semibold"
+              className="h-10 text-sm mt-1 border-neutral-300 bg-white text-black font-semibold"
               value={shelfLifeDays}
               onChange={e => setShelfLifeDays(e.target.value)}
               placeholder="e.g. 15 or 90"
@@ -210,8 +210,7 @@ export default function ProductFormModal({
         <DialogFooter>
           <Button
             size="lg"
-            variant="outline"
-            className="w-full text-base font-bold bg-white text-black border-2 border-black hover:bg-neutral-100"
+            className="w-full text-base font-bold bg-black text-white hover:bg-neutral-800 border-none rounded-lg shadow-xs"
             onClick={handleSubmit}
             disabled={saving}
           >

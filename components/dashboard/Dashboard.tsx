@@ -97,7 +97,7 @@ export default function Dashboard() {
       <div className="max-w-6xl mx-auto space-y-6">
         
         {/* Top Header & Period Selector */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-black shadow-xs">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-neutral-200 shadow-xs">
           <div>
             <h1 className="text-3xl font-black tracking-tight text-black flex items-center gap-2">
               <Package className="h-8 w-8" />
@@ -118,7 +118,7 @@ export default function Dashboard() {
             <p className="text-xs font-bold uppercase tracking-wider text-neutral-500">Total Live Stock Summary</p>
             {renderUnitSummary(stockByUnit)}
           </div>
-          <Badge variant="outline" className="border-black text-black font-mono font-bold text-xs self-start sm:self-auto">
+          <Badge variant="outline" className="border-neutral-300 text-black font-mono font-bold text-xs self-start sm:self-auto">
             {allProducts.length} Items Listed
           </Badge>
         </div>
@@ -128,7 +128,7 @@ export default function Dashboard() {
           <Search className="absolute left-3.5 top-3.5 h-4 w-4 text-black" />
           <Input
             placeholder="Search by Product Name, SKU Code (e.g. 1011) or Batch..."
-            className="pl-10 h-11 bg-white text-base rounded-xl border-black text-black placeholder:text-neutral-500"
+            className="pl-10 h-11 bg-white text-base rounded-xl border-neutral-300 text-black placeholder:text-neutral-500"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
           />
@@ -136,13 +136,13 @@ export default function Dashboard() {
 
         {/* Current Stock Inventory Table */}
         {loading ? (
-          <div className="bg-white p-12 rounded-xl border border-black text-center text-black">
+          <div className="bg-white p-12 rounded-xl border border-neutral-200 text-center text-black">
             <p className="text-base font-semibold animate-pulse">Loading current stock data...</p>
           </div>
         ) : (
-          <div className="border border-black rounded-xl overflow-hidden bg-white shadow-xs">
+          <div className="border border-neutral-200 rounded-xl overflow-hidden bg-white shadow-xs">
             <table className="w-full text-left text-sm">
-              <thead className="bg-neutral-100 text-black text-xs uppercase font-bold tracking-wider border-b border-black">
+              <thead className="bg-neutral-100 text-black text-xs uppercase font-bold tracking-wider border-b border-neutral-200">
                 <tr>
                   <th className="py-3.5 px-4">SKU Code</th>
                   <th className="py-3.5 px-4">Product Name</th>

@@ -35,9 +35,9 @@ export function ProductList({ products, onRefresh }: ProductListProps) {
   }
 
   return (
-    <div className="border border-black rounded-xl overflow-hidden bg-white text-black shadow-xs">
+    <div className="border border-neutral-200 rounded-xl overflow-hidden bg-white text-black shadow-xs">
       <table className="w-full text-left text-sm text-black">
-        <thead className="bg-neutral-100 border-b border-black text-black text-xs uppercase font-bold tracking-wider">
+        <thead className="bg-neutral-100 border-b border-neutral-200 text-black text-xs uppercase font-bold tracking-wider">
           <tr>
             <th className="py-3.5 px-4">SKU Code</th>
             <th className="py-3.5 px-4">Product Name</th>
@@ -52,7 +52,7 @@ export function ProductList({ products, onRefresh }: ProductListProps) {
             <tr key={product.id} className="hover:bg-neutral-50 transition-colors">
               <td className="py-3 px-4 font-mono font-bold text-black">
                 {product.skuCode ? (
-                  <Badge variant="outline" className="font-mono text-xs border-black bg-white text-black">
+                  <Badge variant="outline" className="font-mono text-xs border-neutral-300 bg-white text-black">
                     {product.skuCode}
                   </Badge>
                 ) : (
@@ -70,8 +70,8 @@ export function ProductList({ products, onRefresh }: ProductListProps) {
                   <ProductFormModal product={product} onSaved={onRefresh} />
                   <Button
                     size="sm"
-                    variant="outline"
-                    className="h-8 px-2 border-black text-black hover:bg-neutral-100"
+                    variant="ghost"
+                    className="h-8 px-2 text-neutral-500 hover:text-red-600 hover:bg-red-50 border-none"
                     onClick={() => handleDelete(product.id, product.name)}
                     disabled={deletingId === product.id}
                   >

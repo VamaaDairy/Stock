@@ -48,7 +48,7 @@ export default function ProductsPage() {
       <div className="max-w-6xl mx-auto w-full space-y-6">
         
         {/* Header & Add Product Modal */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-black shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-neutral-200 shadow-xs">
           <div>
             <h1 className="text-3xl font-black tracking-tight text-black flex items-center gap-2">
               <Package className="h-8 w-8" />
@@ -59,7 +59,7 @@ export default function ProductsPage() {
             </p>
           </div>
           <div className="flex items-center gap-3 self-start sm:self-auto">
-            <Badge variant="outline" className="border-black text-black font-mono font-bold text-xs">
+            <Badge variant="outline" className="border-neutral-300 text-black font-mono font-bold text-xs">
               Total: {products.length} Products
             </Badge>
             <ProductFormModal onSaved={fetchProducts} />
@@ -71,7 +71,7 @@ export default function ProductsPage() {
           <Search className="absolute left-3.5 top-3.5 h-4 w-4 text-black" />
           <Input
             placeholder="Search by Product Name, SKU Code (e.g. 1003) or Category..."
-            className="pl-10 h-11 bg-white text-base rounded-xl border-black text-black placeholder:text-neutral-500"
+            className="pl-10 h-11 bg-white text-base rounded-xl border-neutral-300 text-black placeholder:text-neutral-500"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
           />
@@ -79,7 +79,7 @@ export default function ProductsPage() {
 
         {/* Product List Table */}
         {loading ? (
-          <div className="bg-white p-12 rounded-xl border border-black text-center text-black">
+          <div className="bg-white p-12 rounded-xl border border-neutral-200 text-center text-black">
             <p className="text-base font-semibold animate-pulse">Loading products master...</p>
           </div>
         ) : (
