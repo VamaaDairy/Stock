@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Search, Truck } from "lucide-react"
+import { Search, Truck, Filter } from "lucide-react"
 import AddSalesModal from "@/components/sales/AddSalesModal"
 import DatePeriodSelector, { PeriodSelection } from "@/components/ui/date-period-selector"
 import type { CategoryGroup, Product } from "@/components/dashboard/types"
@@ -22,6 +22,7 @@ export default function SalesPage() {
   const [data, setData] = useState<CategoryGroup[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
+  const [selectedBatch, setSelectedBatch] = useState<string>("all")
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -44,13 +45,32 @@ export default function SalesPage() {
     fetchData()
   }, [fetchData])
 
+  const availableBatches = useMemo(() => {
+    const batches = new Set<string>()
+    data.forEach(group => {
+      group.products.forEach(p => {
+        if (p.batchNumber) {
+          p.batchNumber.split(',').forEach(b => {
+            const trimmed = b.trim()
+            if (trimmed) batches.add(trimmed)
+          })
+        }
+      })
+    })
+    return Array.from(batches).sort()
+  }, [data])
+
   const allProducts = useMemo(() => {
-    const list: (Product & { category: string })[] = []
+    let list: (Product & { category: string })[] = []
     data.forEach(group => {
       group.products.forEach(p => {
         list.push({ ...p, category: group.category })
       })
     })
+
+    if (selectedBatch !== "all") {
+      list = list.filter(p => p.batchNumber && p.batchNumber.split(',').map(b => b.trim()).includes(selectedBatch))
+    }
 
     if (!searchQuery.trim()) return list
     const q = searchQuery.toLowerCase().trim()
@@ -61,7 +81,7 @@ export default function SalesPage() {
         p.category.toLowerCase().includes(q) ||
         (p.batchNumber && p.batchNumber.toLowerCase().includes(q))
     )
-  }, [data, searchQuery])
+  }, [data, searchQuery, selectedBatch])
 
   const currentDateLabel = period.mode === "range" ? `${period.fromDate} to ${period.toDate}` : period.date
 
@@ -85,15 +105,34 @@ export default function SalesPage() {
           </div>
         </div>
 
-        {/* Search Input */}
-        <div className="relative">
-          <Search className="absolute left-3.5 top-3.5 h-4 w-4 text-black" />
-          <Input
-            placeholder="Search product name, SKU (e.g. 1011) or batch..."
-            className="pl-10 h-11 bg-white text-base rounded-xl border-neutral-300 text-black placeholder:text-neutral-500"
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-          />
+        {/* Search & Batch Filter */}
+        <div className="flex flex-col sm:flex-row items-center gap-3">
+          <div className="relative flex-1 w-full">
+            <Search className="absolute left-3.5 top-3.5 h-4 w-4 text-black" />
+            <Input
+              placeholder="Search product name, SKU (e.g. 1011) or batch..."
+              className="pl-10 h-11 bg-white text-base rounded-xl border-neutral-300 text-black placeholder:text-neutral-500"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+            />
+          </div>
+          {availableBatches.length > 0 && (
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <span className="text-xs font-bold text-neutral-600 uppercase whitespace-nowrap flex items-center gap-1">
+                <Filter className="h-3.5 w-3.5" /> Batch:
+              </span>
+              <select
+                value={selectedBatch}
+                onChange={e => setSelectedBatch(e.target.value)}
+                className="h-11 px-3 text-sm font-semibold rounded-xl border border-neutral-300 bg-white text-black focus:outline-none"
+              >
+                <option value="all">All Batches ({availableBatches.length})</option>
+                {availableBatches.map(b => (
+                  <option key={b} value={b}>Batch: {b}</option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
 
         {/* Table */}
@@ -108,7 +147,7 @@ export default function SalesPage() {
                 <tr>
                   <th className="py-3.5 px-4">SKU Code</th>
                   <th className="py-3.5 px-4">Product Name</th>
-                  <th className="py-3.5 px-4">Batch No</th>
+                  <th className="py-3.5 px-4">Batch No(s)</th>
                   <th className="py-3.5 px-4 text-right">Sale Crt</th>
                   <th className="py-3.5 px-4 text-right">Sale Pc</th>
                   <th className="py-3.5 px-4 text-right font-black">Total Sales Out</th>
@@ -122,7 +161,7 @@ export default function SalesPage() {
                   <tr key={p.id} className="hover:bg-neutral-50 transition-colors">
                     <td className="py-3 px-4 font-mono font-bold text-black">
                       {p.skuCode ? (
-                        <Badge variant="outline" className="border-black text-black font-mono">
+                        <Badge variant="outline" className="border-neutral-300 text-black font-mono">
                           {p.skuCode}
                         </Badge>
                       ) : (
@@ -132,9 +171,13 @@ export default function SalesPage() {
                     <td className="py-3 px-4 font-bold text-black">{p.name}</td>
                     <td className="py-3 px-4 font-mono font-semibold">
                       {p.batchNumber ? (
-                        <Badge variant="outline" className="border-black text-black font-mono">
-                          {p.batchNumber}
-                        </Badge>
+                        <div className="flex flex-wrap gap-1">
+                          {p.batchNumber.split(',').map((b, idx) => (
+                            <Badge key={idx} variant="outline" className="border-neutral-300 text-black font-mono text-xs">
+                              {b.trim()}
+                            </Badge>
+                          ))}
+                        </div>
                       ) : (
                         "—"
                       )}

@@ -10,11 +10,10 @@ import {
   DialogFooter,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Button, buttonVariants } from "@/components/ui/button"
+import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { cn } from "@/lib/utils"
 import type { Product } from "./types"
 
 export default function AddEntryModal({
@@ -32,12 +31,27 @@ export default function AddEntryModal({
 
   const pcsPerCrt = product.pcsPerCrt || 1
 
+  const initialMfg = product.manufacturingDate ?? date
+  const initialShelfLife = product.shelfLifeDays ? String(product.shelfLifeDays) : ""
+
+  function computeExpiryDate(mfgDateStr: string, shelfLifeStr: string): string {
+    if (!mfgDateStr) return ""
+    const days = parseInt(shelfLifeStr, 10)
+    if (isNaN(days) || days <= 0) return ""
+    const d = new Date(mfgDateStr)
+    if (isNaN(d.getTime())) return ""
+    d.setDate(d.getDate() + days)
+    return d.toISOString().slice(0, 10)
+  }
+
+  const initialExpiry = product.expiryDate ?? computeExpiryDate(initialMfg, initialShelfLife)
+
   const [skuCode, setSkuCode] = useState(product.skuCode ?? "")
   const [batchNumber, setBatchNumber] = useState(product.batchNumber ?? "B1")
-  const [mfgDate, setMfgDate] = useState(product.manufacturingDate ?? date)
-  const [ubdDate, setUbdDate] = useState(product.ubd ?? "")
-  const [expiryDate, setExpiryDate] = useState(product.expiryDate ?? "")
-  const [shelfLifeDays, setShelfLifeDays] = useState(product.shelfLifeDays ? String(product.shelfLifeDays) : "")
+  const [mfgDate, setMfgDate] = useState(initialMfg)
+  const [ubdDate, setUbdDate] = useState(product.ubd ?? initialExpiry)
+  const [expiryDate, setExpiryDate] = useState(initialExpiry)
+  const [shelfLifeDays, setShelfLifeDays] = useState(initialShelfLife)
 
   const [prodCrt, setProdCrt] = useState(String(product.production.crt || ""))
   const [prodPc, setProdPc] = useState(String(product.production.pc || ""))
@@ -168,15 +182,10 @@ export default function AddEntryModal({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger
-        className={cn(
-          buttonVariants({ size: "lg", variant: "outline" }),
-          "text-sm font-bold bg-white text-black border border-black hover:bg-neutral-100"
-        )}
-      >
+      <DialogTrigger className="h-9 px-4 text-sm font-semibold bg-white text-black border border-neutral-300 hover:bg-neutral-100 rounded-lg transition-colors shadow-xs">
         {product.hasEntry ? "Edit entry" : "Add entry"}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto bg-white text-black border-black">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto bg-white text-black border-neutral-200">
         <DialogHeader>
           <DialogTitle className="text-xl font-black flex items-center justify-between text-black">
             <span>{product.name}</span>
@@ -184,7 +193,7 @@ export default function AddEntryModal({
           <DialogDescription className="text-sm font-bold text-neutral-700 flex items-center justify-between flex-wrap gap-2">
             <span>Date: {date} · Tally Unit: {product.unit}</span>
             {pcsPerCrt > 1 && (
-              <Badge variant="outline" className="border-black text-black font-mono text-xs">
+              <Badge variant="outline" className="border-neutral-300 text-black font-mono text-xs">
                 Pack Config: 1 {product.unit} = {pcsPerCrt} Pcs
               </Badge>
             )}
@@ -193,14 +202,14 @@ export default function AddEntryModal({
 
         <div className="space-y-4 py-2 text-black">
           {/* SKU Code & Batch Metadata */}
-          <div className="bg-neutral-50 p-3.5 rounded-lg border border-black/20 space-y-3">
+          <div className="bg-neutral-50 p-3.5 rounded-lg border border-neutral-200 space-y-3">
             <h4 className="text-xs font-black uppercase tracking-wider text-black">Product Code & Batch Details</h4>
             
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label className="text-xs font-bold text-black">Product Code (SKU Code)</Label>
                 <Input
-                  className="h-10 text-sm mt-1 font-mono font-bold border-black bg-white text-black"
+                  className="h-10 text-sm mt-1 font-mono font-bold border-neutral-300 bg-white text-black"
                   value={skuCode}
                   onChange={e => setSkuCode(e.target.value)}
                   placeholder="e.g. 1011"
@@ -209,7 +218,7 @@ export default function AddEntryModal({
               <div>
                 <Label className="text-xs font-bold text-black">Batch Number / Code</Label>
                 <Input
-                  className="h-10 text-sm mt-1 border-black bg-white text-black font-semibold"
+                  className="h-10 text-sm mt-1 border-neutral-300 bg-white text-black font-semibold"
                   value={batchNumber}
                   onChange={e => setBatchNumber(e.target.value)}
                   placeholder="e.g. AI08HU"
@@ -222,7 +231,7 @@ export default function AddEntryModal({
                 <Label className="text-xs font-bold text-black">Manufacturing Date</Label>
                 <Input
                   type="date"
-                  className="h-10 text-sm mt-1 border-black bg-white text-black font-semibold"
+                  className="h-10 text-sm mt-1 border-neutral-300 bg-white text-black font-semibold"
                   value={mfgDate}
                   onChange={e => handleMfgDateChange(e.target.value)}
                 />
@@ -231,7 +240,7 @@ export default function AddEntryModal({
                 <Label className="text-xs font-bold text-black">Shelf Life (Days)</Label>
                 <Input
                   type="number"
-                  className="h-10 text-sm mt-1 border-black bg-white text-black font-semibold"
+                  className="h-10 text-sm mt-1 border-neutral-300 bg-white text-black font-semibold"
                   value={shelfLifeDays}
                   onChange={e => handleShelfLifeChange(e.target.value)}
                   placeholder="e.g. 17"
@@ -244,7 +253,7 @@ export default function AddEntryModal({
                 <Label className="text-xs font-bold text-black">UBD (Use Before Date)</Label>
                 <Input
                   type="date"
-                  className="h-10 text-sm mt-1 border-black bg-white text-black font-semibold"
+                  className="h-10 text-sm mt-1 border-neutral-300 bg-white text-black font-semibold"
                   value={ubdDate}
                   onChange={e => setUbdDate(e.target.value)}
                 />
@@ -253,7 +262,7 @@ export default function AddEntryModal({
                 <Label className="text-xs font-bold text-black">Expiry Date</Label>
                 <Input
                   type="date"
-                  className="h-10 text-sm mt-1 border-black bg-white text-black font-semibold"
+                  className="h-10 text-sm mt-1 border-neutral-300 bg-white text-black font-semibold"
                   value={expiryDate}
                   onChange={e => handleExpiryDateChange(e.target.value)}
                 />
@@ -268,15 +277,15 @@ export default function AddEntryModal({
             </Label>
             <div className="grid grid-cols-3 gap-2">
               <div>
-                <Input className="h-11 text-base border-black text-black font-semibold" placeholder={product.unit} value={prodCrt} onChange={e => handleProdCrtChange(e.target.value)} />
+                <Input className="h-11 text-base border-neutral-300 text-black font-semibold" placeholder={product.unit} value={prodCrt} onChange={e => handleProdCrtChange(e.target.value)} />
                 <p className="text-[11px] font-medium text-neutral-600 text-center mt-0.5">{product.unit}</p>
               </div>
               <div>
-                <Input className="h-11 text-base border-black text-black font-semibold" placeholder="Pc" value={prodPc} onChange={e => handleProdPcChange(e.target.value)} />
+                <Input className="h-11 text-base border-neutral-300 text-black font-semibold" placeholder="Pc" value={prodPc} onChange={e => handleProdPcChange(e.target.value)} />
                 <p className="text-[11px] font-medium text-neutral-600 text-center mt-0.5">Pc</p>
               </div>
               <div>
-                <Input className="h-11 text-base font-bold border-black text-black" placeholder="Total" value={prodTotal} onChange={e => setProdTotal(e.target.value)} />
+                <Input className="h-11 text-base font-bold border-neutral-300 text-black" placeholder="Total" value={prodTotal} onChange={e => setProdTotal(e.target.value)} />
                 <p className="text-[11px] font-medium text-neutral-600 text-center mt-0.5">Total ({product.unit})</p>
               </div>
             </div>
@@ -289,15 +298,15 @@ export default function AddEntryModal({
             </Label>
             <div className="grid grid-cols-3 gap-2">
               <div>
-                <Input className="h-11 text-base border-black text-black font-semibold" placeholder={product.unit} value={demCrt} onChange={e => handleDemCrtChange(e.target.value)} />
+                <Input className="h-11 text-base border-neutral-300 text-black font-semibold" placeholder={product.unit} value={demCrt} onChange={e => handleDemCrtChange(e.target.value)} />
                 <p className="text-[11px] font-medium text-neutral-600 text-center mt-0.5">{product.unit}</p>
               </div>
               <div>
-                <Input className="h-11 text-base border-black text-black font-semibold" placeholder="Pc" value={demPc} onChange={e => handleDemPcChange(e.target.value)} />
+                <Input className="h-11 text-base border-neutral-300 text-black font-semibold" placeholder="Pc" value={demPc} onChange={e => handleDemPcChange(e.target.value)} />
                 <p className="text-[11px] font-medium text-neutral-600 text-center mt-0.5">Pc</p>
               </div>
               <div>
-                <Input className="h-11 text-base font-bold border-black text-black" placeholder="Total" value={demTotal} onChange={e => setDemTotal(e.target.value)} />
+                <Input className="h-11 text-base font-bold border-neutral-300 text-black" placeholder="Total" value={demTotal} onChange={e => setDemTotal(e.target.value)} />
                 <p className="text-[11px] font-medium text-neutral-600 text-center mt-0.5">Total ({product.unit})</p>
               </div>
             </div>
@@ -310,15 +319,15 @@ export default function AddEntryModal({
             </Label>
             <div className="grid grid-cols-3 gap-2">
               <div>
-                <Input className="h-11 text-base border-black text-black font-semibold" placeholder={product.unit} value={saleCrt} onChange={e => handleSaleCrtChange(e.target.value)} />
+                <Input className="h-11 text-base border-neutral-300 text-black font-semibold" placeholder={product.unit} value={saleCrt} onChange={e => handleSaleCrtChange(e.target.value)} />
                 <p className="text-[11px] font-medium text-neutral-600 text-center mt-0.5">{product.unit}</p>
               </div>
               <div>
-                <Input className="h-11 text-base border-black text-black font-semibold" placeholder="Pc" value={salePc} onChange={e => handleSalePcChange(e.target.value)} />
+                <Input className="h-11 text-base border-neutral-300 text-black font-semibold" placeholder="Pc" value={salePc} onChange={e => handleSalePcChange(e.target.value)} />
                 <p className="text-[11px] font-medium text-neutral-600 text-center mt-0.5">Pc</p>
               </div>
               <div>
-                <Input className="h-11 text-base font-bold border-black text-black" placeholder="Total" value={saleTotal} onChange={e => setSaleTotal(e.target.value)} />
+                <Input className="h-11 text-base font-bold border-neutral-300 text-black" placeholder="Total" value={saleTotal} onChange={e => setSaleTotal(e.target.value)} />
                 <p className="text-[11px] font-medium text-neutral-600 text-center mt-0.5">Total ({product.unit})</p>
               </div>
             </div>
@@ -327,17 +336,16 @@ export default function AddEntryModal({
           {/* Sales Target */}
           <div className="space-y-1">
             <Label className="text-sm font-bold text-black">Sales Target ({product.unit})</Label>
-            <Input className="h-11 text-base border-black text-black font-semibold" value={salesTarget} onChange={e => setSalesTarget(e.target.value)} placeholder="0" />
+            <Input className="h-11 text-base border-neutral-300 text-black font-semibold" value={salesTarget} onChange={e => setSalesTarget(e.target.value)} placeholder="0" />
           </div>
 
-          {error && <p className="text-sm text-black font-bold border border-black p-2 rounded">{error}</p>}
+          {error && <p className="text-sm text-red-600 font-semibold p-2 rounded bg-red-50">{error}</p>}
         </div>
 
         <DialogFooter className="pt-2">
           <Button
             size="lg"
-            variant="outline"
-            className="w-full text-base font-bold bg-white text-black border-2 border-black hover:bg-neutral-100"
+            className="w-full text-base font-bold bg-white text-black border border-neutral-300 hover:bg-neutral-100 rounded-lg shadow-xs"
             onClick={handleSubmit}
             disabled={saving}
           >

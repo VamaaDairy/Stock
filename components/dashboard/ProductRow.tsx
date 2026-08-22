@@ -27,9 +27,9 @@ export default function ProductRow({
     const diffDays = Math.ceil((expTime - today) / (1000 * 3600 * 24))
 
     if (diffDays <= 0) {
-      return <Badge variant="outline" className="border-2 border-black text-black text-[10px] px-1.5 py-0 uppercase tracking-wider font-extrabold bg-white">Expired ({targetDate})</Badge>
+      return <Badge variant="outline" className="border-2 border-neutral-400 text-black text-[10px] px-1.5 py-0 uppercase tracking-wider font-extrabold bg-white">Expired ({targetDate})</Badge>
     } else if (diffDays <= 15) {
-      return <Badge variant="outline" className="border-black text-black font-bold text-[10px] px-1.5 py-0 bg-neutral-100">Near Exp: {diffDays}d ({targetDate})</Badge>
+      return <Badge variant="outline" className="border-neutral-400 text-black font-bold text-[10px] px-1.5 py-0 bg-neutral-100">Near Exp: {diffDays}d ({targetDate})</Badge>
     } else {
       return <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-white text-neutral-800 border-neutral-300">Exp: {targetDate}</Badge>
     }
@@ -42,7 +42,7 @@ export default function ProductRow({
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-base font-bold text-black">{product.name}</span>
           {skuCode ? (
-            <Badge variant="outline" className="text-[11px] font-mono font-bold text-black border-black bg-white">
+            <Badge variant="outline" className="text-[11px] font-mono font-bold text-black border-neutral-300 bg-white">
               {skuCode}
             </Badge>
           ) : (
@@ -55,9 +55,15 @@ export default function ProductRow({
         <div className="flex items-center gap-2 mt-1 flex-wrap">
           {hasEntry ? (
             <>
-              <Badge variant="outline" className="text-xs font-bold bg-white text-black border border-black">
-                Batch: {batchNumber}
-              </Badge>
+              {batchNumber ? (
+                <div className="flex flex-wrap gap-1">
+                  {batchNumber.split(',').map((b, idx) => (
+                    <Badge key={idx} variant="outline" className="text-xs font-bold bg-white text-black border border-neutral-300">
+                      Batch: {b.trim()}
+                    </Badge>
+                  ))}
+                </div>
+              ) : null}
               {getExpiryBadge()}
             </>
           ) : (

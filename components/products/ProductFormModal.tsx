@@ -97,8 +97,8 @@ export default function ProductFormModal({
       <DialogTrigger
         className={
           isEditing
-            ? "h-8 text-xs font-semibold bg-black text-white hover:bg-neutral-800 border-none px-3 rounded-md flex items-center gap-1 transition-colors shadow-xs"
-            : "h-10 px-4 font-bold bg-black text-white hover:bg-neutral-800 border-none rounded-md flex items-center gap-2 transition-colors shadow-xs"
+            ? "h-8 text-xs font-semibold bg-white text-black border border-neutral-300 hover:bg-neutral-100 px-3 rounded-md flex items-center gap-1 transition-colors shadow-xs"
+            : "h-10 px-4 font-bold bg-white text-black border border-neutral-300 hover:bg-neutral-100 rounded-md flex items-center gap-2 transition-colors shadow-xs"
         }
       >
         {isEditing ? (
@@ -204,13 +204,13 @@ export default function ProductFormModal({
             />
           </div>
 
-          {error && <p className="text-sm text-black font-bold border border-black p-2 rounded">{error}</p>}
+          {error && <p className="text-sm text-red-600 font-semibold p-2 rounded bg-red-50">{error}</p>}
         </div>
 
         <DialogFooter>
           <Button
             size="lg"
-            className="w-full text-base font-bold bg-black text-white hover:bg-neutral-800 border-none rounded-lg shadow-xs"
+            className="w-full text-base font-bold bg-white text-black border border-neutral-300 hover:bg-neutral-100 rounded-lg shadow-xs"
             onClick={handleSubmit}
             disabled={saving}
           >

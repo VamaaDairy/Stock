@@ -80,8 +80,8 @@ export default function DatePeriodSelector({
             variant="ghost"
             size="sm"
             onClick={() => handleModeChange("single")}
-            className={`h-7 text-xs font-bold px-2.5 rounded-md border-none ${
-              mode === "single" ? "bg-black text-white shadow-xs" : "text-neutral-700 hover:bg-neutral-200"
+            className={`h-7 text-xs font-bold px-2.5 rounded-md ${
+              mode === "single" ? "bg-white text-black border border-neutral-300 shadow-xs" : "text-neutral-700 hover:bg-neutral-200 border-none"
             }`}
           >
             Single Date
@@ -91,8 +91,8 @@ export default function DatePeriodSelector({
             variant="ghost"
             size="sm"
             onClick={() => handleModeChange("range")}
-            className={`h-7 text-xs font-bold px-2.5 rounded-md border-none ${
-              mode === "range" ? "bg-black text-white shadow-xs" : "text-neutral-700 hover:bg-neutral-200"
+            className={`h-7 text-xs font-bold px-2.5 rounded-md ${
+              mode === "range" ? "bg-white text-black border border-neutral-300 shadow-xs" : "text-neutral-700 hover:bg-neutral-200 border-none"
             }`}
           >
             Date Range (Period)

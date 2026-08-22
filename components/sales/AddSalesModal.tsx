@@ -118,7 +118,7 @@ export default function AddSalesModal({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger className="h-8 px-3 text-xs font-semibold bg-black text-white hover:bg-neutral-800 border-none rounded-md transition-colors shadow-xs">
+      <DialogTrigger className="h-8 px-3 text-xs font-semibold bg-white text-black border border-neutral-300 hover:bg-neutral-100 rounded-md transition-colors shadow-xs">
         {product.sale.total > 0 ? "Edit Sale" : "Add Sale Out"}
       </DialogTrigger>
       <DialogContent className="sm:max-w-md bg-white text-black border-neutral-200">
@@ -129,7 +129,7 @@ export default function AddSalesModal({
           <DialogDescription className="text-xs font-bold text-neutral-700 flex items-center justify-between flex-wrap gap-2">
             <span>Date: {date} · Tally Unit: {product.unit}</span>
             {pcsPerCrt > 1 && (
-              <Badge variant="outline" className="border-black text-black font-mono text-[10px]">
+              <Badge variant="outline" className="border-neutral-300 text-black font-mono text-[10px]">
                 1 {product.unit} = {pcsPerCrt} Pcs
               </Badge>
             )}
@@ -196,18 +196,18 @@ export default function AddSalesModal({
             <Input className="h-11 text-base border-neutral-300 text-black font-semibold" value={salesTarget} onChange={e => setSalesTarget(e.target.value)} placeholder="0" />
           </div>
 
-          <div className="bg-neutral-50 p-3 rounded-lg border border-black/20 text-xs space-y-1">
+          <div className="bg-neutral-50 p-3 rounded-lg border border-neutral-200 text-xs space-y-1">
             <p className="font-bold text-black">Stock Impact Note:</p>
             <p className="text-neutral-600 font-semibold">Sales entry reduces closing stock balance directly.</p>
           </div>
 
-          {error && <p className="text-sm text-black font-bold border border-black p-2 rounded">{error}</p>}
+          {error && <p className="text-sm text-red-600 font-semibold p-2 rounded bg-red-50">{error}</p>}
         </div>
 
         <DialogFooter>
           <Button
             size="lg"
-            className="w-full text-base font-bold bg-black text-white hover:bg-neutral-800 border-none rounded-lg shadow-xs"
+            className="w-full text-base font-bold bg-white text-black border border-neutral-300 hover:bg-neutral-100 rounded-lg shadow-xs"
             onClick={handleSubmit}
             disabled={saving}
           >

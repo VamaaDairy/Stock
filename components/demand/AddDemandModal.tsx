@@ -31,7 +31,6 @@ export default function AddDemandModal({
 
   const pcsPerCrt = product.pcsPerCrt || 1
 
-  const [batchNumber, setBatchNumber] = useState(product.batchNumber ?? "B1")
   const [demPc, setDemPc] = useState(
     product.demand.pc > 0
       ? String(product.demand.pc)
@@ -93,7 +92,7 @@ export default function AddDemandModal({
           productId: product.id,
           date,
           skuCode: product.skuCode,
-          batchNumber,
+          batchNumber: product.batchNumber ?? "B1",
           manufacturingDate: product.manufacturingDate,
           ubd: product.ubd,
           expiryDate: product.expiryDate,
@@ -117,7 +116,7 @@ export default function AddDemandModal({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger className="h-8 px-3 text-xs font-semibold bg-black text-white hover:bg-neutral-800 border-none rounded-md transition-colors shadow-xs">
+      <DialogTrigger className="h-8 px-3 text-xs font-semibold bg-white text-black border border-neutral-300 hover:bg-neutral-100 rounded-md transition-colors shadow-xs">
         {product.demand.total > 0 ? "Edit Demand" : "Add Demand"}
       </DialogTrigger>
       <DialogContent className="sm:max-w-md bg-white text-black border-neutral-200">
@@ -128,7 +127,7 @@ export default function AddDemandModal({
           <DialogDescription className="text-xs font-bold text-neutral-700 flex items-center justify-between flex-wrap gap-2">
             <span>Date: {date} · Tally Unit: {product.unit}</span>
             {pcsPerCrt > 1 && (
-              <Badge variant="outline" className="border-black text-black font-mono text-[10px]">
+              <Badge variant="outline" className="border-neutral-300 text-black font-mono text-[10px]">
                 1 {product.unit} = {pcsPerCrt} Pcs
               </Badge>
             )}
@@ -136,17 +135,6 @@ export default function AddDemandModal({
         </DialogHeader>
 
         <div className="space-y-4 py-2 text-black">
-          {/* Batch Code Field */}
-          <div>
-            <Label className="text-xs font-bold text-black">Batch Number / Code</Label>
-            <Input
-              className="h-10 text-sm mt-1 border-neutral-300 bg-white text-black font-mono font-bold"
-              value={batchNumber}
-              onChange={e => setBatchNumber(e.target.value)}
-              placeholder="e.g. AA19HIM"
-            />
-          </div>
-
           {/* Smallest Unit Entry with Auto-Conversion */}
           <div className="space-y-2 bg-neutral-50 p-3 rounded-xl border border-neutral-200">
             <Label className="text-xs font-black text-black uppercase tracking-wider block">
@@ -189,18 +177,18 @@ export default function AddDemandModal({
             )}
           </div>
 
-          <div className="bg-neutral-50 p-3 rounded-lg border border-black/20 text-xs space-y-1">
+          <div className="bg-neutral-50 p-3 rounded-lg border border-neutral-200 text-xs space-y-1">
             <p className="font-bold text-black">Live Stock Context:</p>
             <p className="text-neutral-600 font-semibold">Current Available Stock: <span className="font-bold text-black">{product.currentStock} {product.unit}</span></p>
           </div>
 
-          {error && <p className="text-sm text-black font-bold border border-black p-2 rounded">{error}</p>}
+          {error && <p className="text-sm text-red-600 font-semibold p-2 rounded bg-red-50">{error}</p>}
         </div>
 
         <DialogFooter>
           <Button
             size="lg"
-            className="w-full text-base font-bold bg-black text-white hover:bg-neutral-800 border-none rounded-lg shadow-xs"
+            className="w-full text-base font-bold bg-white text-black border border-neutral-300 hover:bg-neutral-100 rounded-lg shadow-xs"
             onClick={handleSubmit}
             disabled={saving}
           >

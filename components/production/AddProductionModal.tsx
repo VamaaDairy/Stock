@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   Dialog,
   DialogContent,
@@ -15,6 +15,16 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import type { Product } from "@/components/dashboard/types"
+
+function computeExpiryDate(mfgDateStr: string, shelfLifeStr: string): string {
+  if (!mfgDateStr) return ""
+  const days = parseInt(shelfLifeStr, 10)
+  if (isNaN(days) || days <= 0) return ""
+  const d = new Date(mfgDateStr)
+  if (isNaN(d.getTime())) return ""
+  d.setDate(d.getDate() + days)
+  return d.toISOString().slice(0, 10)
+}
 
 export default function AddProductionModal({
   product,
@@ -31,11 +41,15 @@ export default function AddProductionModal({
 
   const pcsPerCrt = product.pcsPerCrt || 1
 
+  const initialMfg = product.manufacturingDate ?? date
+  const initialShelfLife = String(product.shelfLifeDays ?? 0)
+  const initialExpiry = product.expiryDate ?? computeExpiryDate(initialMfg, initialShelfLife)
+
   const [batchNumber, setBatchNumber] = useState(product.batchNumber ?? "B1")
-  const [mfgDate, setMfgDate] = useState(product.manufacturingDate ?? date)
-  const [shelfLifeDays, setShelfLifeDays] = useState(String(product.shelfLifeDays ?? 0))
-  const [expiryDate, setExpiryDate] = useState(product.expiryDate ?? "")
-  const [ubd, setUbd] = useState(product.ubd ?? "")
+  const [mfgDate, setMfgDate] = useState(initialMfg)
+  const [shelfLifeDays, setShelfLifeDays] = useState(initialShelfLife)
+  const [expiryDate, setExpiryDate] = useState(initialExpiry)
+  const [ubd, setUbd] = useState(product.ubd ?? initialExpiry)
 
   const [prodPc, setProdPc] = useState(
     product.production.pc > 0
@@ -46,6 +60,38 @@ export default function AddProductionModal({
   )
   const [prodCrt, setProdCrt] = useState(String(product.production.crt || ""))
   const [prodTotal, setProdTotal] = useState(String(product.production.total || ""))
+
+  // Auto-recalculate Expiry whenever mfgDate or shelfLifeDays change
+  const handleMfgDateChange = (newMfg: string) => {
+    setMfgDate(newMfg)
+    const calcExp = computeExpiryDate(newMfg, shelfLifeDays)
+    if (calcExp) {
+      setExpiryDate(calcExp)
+      setUbd(calcExp)
+    }
+  }
+
+  const handleShelfLifeChange = (daysStr: string) => {
+    setShelfLifeDays(daysStr)
+    const calcExp = computeExpiryDate(mfgDate, daysStr)
+    if (calcExp) {
+      setExpiryDate(calcExp)
+      setUbd(calcExp)
+    }
+  }
+
+  const handleExpiryDateChange = (newExp: string) => {
+    setExpiryDate(newExp)
+    setUbd(newExp)
+    if (mfgDate && newExp) {
+      const start = new Date(mfgDate).getTime()
+      const end = new Date(newExp).getTime()
+      const diffDays = Math.round((end - start) / (1000 * 3600 * 24))
+      if (diffDays > 0) {
+        setShelfLifeDays(String(diffDays))
+      }
+    }
+  }
 
   // Smallest unit (Pcs) input handler with auto-conversion to Crt
   const handlePcsChange = (pcsVal: string) => {
@@ -87,19 +133,6 @@ export default function AddProductionModal({
     }
   }
 
-  // Calculate Expiry date automatically if Shelf Life in days is updated
-  const handleShelfLifeChange = (daysStr: string) => {
-    setShelfLifeDays(daysStr)
-    const days = parseInt(daysStr, 10)
-    if (!isNaN(days) && days > 0 && mfgDate) {
-      const d = new Date(mfgDate)
-      d.setDate(d.getDate() + days)
-      const expStr = d.toISOString().slice(0, 10)
-      setExpiryDate(expStr)
-      setUbd(expStr)
-    }
-  }
-
   async function handleSubmit() {
     setSaving(true)
     setError(null)
@@ -113,7 +146,7 @@ export default function AddProductionModal({
           skuCode: product.skuCode,
           batchNumber,
           manufacturingDate: mfgDate,
-          ubd: ubd || null,
+          ubd: ubd || expiryDate || null,
           expiryDate: expiryDate || null,
           shelfLifeDays: Number(shelfLifeDays) || 0,
           production: { crt: Number(prodCrt) || 0, pc: Number(prodPc) || 0, total: Number(prodTotal) || 0 },
@@ -135,7 +168,7 @@ export default function AddProductionModal({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger className="h-8 px-3 text-xs font-semibold bg-black text-white hover:bg-neutral-800 border-none rounded-md transition-colors shadow-xs">
+      <DialogTrigger className="h-8 px-3 text-xs font-semibold bg-white text-black border border-neutral-300 hover:bg-neutral-100 rounded-md transition-colors shadow-xs">
         {product.production.total > 0 ? "Edit Production" : "Add Production"}
       </DialogTrigger>
       <DialogContent className="sm:max-w-md bg-white text-black border-neutral-200">
@@ -171,7 +204,7 @@ export default function AddProductionModal({
                 type="date"
                 className="h-10 text-sm mt-1 border-neutral-300 bg-white text-black font-semibold"
                 value={mfgDate}
-                onChange={e => setMfgDate(e.target.value)}
+                onChange={e => handleMfgDateChange(e.target.value)}
               />
             </div>
           </div>
@@ -189,12 +222,12 @@ export default function AddProductionModal({
               />
             </div>
             <div>
-              <Label className="text-xs font-bold text-neutral-700">Expiry Date</Label>
+              <Label className="text-xs font-bold text-neutral-700">Expiry Date (Auto-calculated)</Label>
               <Input
                 type="date"
                 className="h-10 text-sm mt-1 border-neutral-300 bg-white text-black font-semibold"
                 value={expiryDate}
-                onChange={e => setExpiryDate(e.target.value)}
+                onChange={e => handleExpiryDateChange(e.target.value)}
               />
             </div>
           </div>
@@ -247,7 +280,7 @@ export default function AddProductionModal({
         <DialogFooter>
           <Button
             size="lg"
-            className="w-full text-base font-bold bg-black text-white hover:bg-neutral-800 border-none rounded-lg shadow-xs"
+            className="w-full text-base font-bold bg-white text-black border border-neutral-300 hover:bg-neutral-100 rounded-lg shadow-xs"
             onClick={handleSubmit}
             disabled={saving}
           >

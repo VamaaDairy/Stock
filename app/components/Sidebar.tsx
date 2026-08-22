@@ -29,7 +29,7 @@ export default function Sidebar() {
 
       {/* Sidebar */}
       <aside
-        className={`h-full border-r border-black overflow-y-auto bg-white transition-all duration-300 ease-in-out ${
+        className={`h-full border-r border-neutral-200 overflow-y-auto bg-white transition-all duration-300 ease-in-out ${
           isOpen ? 'w-[30%] opacity-100' : 'w-0 opacity-0'
         }`}
       >

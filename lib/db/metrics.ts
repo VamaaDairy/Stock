@@ -24,24 +24,24 @@ interface EntryInput {
 
 async function getPreviousClosing(productId: string, date: string): Promise<Qty> {
   const result = await turso.execute({
-    sql: `SELECT dm.closing_crt, dm.closing_pc, dm.closing_total
+    sql: `SELECT SUM(dm.closing_crt) as closing_crt, SUM(dm.closing_pc) as closing_pc, SUM(dm.closing_total) as closing_total
           FROM daily_metrics dm
           JOIN batches b ON b.id = dm.batch_id
-          WHERE b.product_id = ? AND b.date < ?
-          ORDER BY b.date DESC
-          LIMIT 1`,
-    args: [productId, date],
+          WHERE b.product_id = ? AND b.date = (
+            SELECT MAX(b2.date) FROM batches b2 WHERE b2.product_id = ? AND b2.date < ?
+          )`,
+    args: [productId, productId, date],
   })
 
-  if (result.rows.length === 0) {
+  if (result.rows.length === 0 || result.rows[0].closing_total === null) {
     return { crt: 0, pc: 0, total: 0 }
   }
 
   const row = result.rows[0]
   return {
-    crt: Number(row.closing_crt),
-    pc: Number(row.closing_pc),
-    total: Number(row.closing_total),
+    crt: Number(row.closing_crt || 0),
+    pc: Number(row.closing_pc || 0),
+    total: Number(row.closing_total || 0),
   }
 }
 
@@ -142,17 +142,22 @@ export async function upsertEntry(input: EntryInput) {
 export async function getMetricsForDate(date: string) {
   const result = await turso.execute({
     sql: `SELECT p.id as product_id, p.name, p.sku_code, p.category, p.unit, COALESCE(p.pcs_per_crt, 1) as pcs_per_crt, COALESCE(p.shelf_life_days, 0) as product_shelf_life,
-                 b.batch_number, b.manufacturing_date, b.ubd, b.expiry_date, b.shelf_life_days,
-                 dm.opening_crt, dm.opening_pc, dm.opening_total,
-                 dm.production_crt, dm.production_pc, dm.production_total,
-                 dm.total_crt, dm.total_pc, dm.total_total,
-                 dm.demand_crt, dm.demand_pc, dm.demand_total,
-                 dm.sale_crt, dm.sale_pc, dm.sale_total,
-                 dm.closing_crt, dm.closing_pc, dm.closing_total,
-                 dm.sales_target
+                 GROUP_CONCAT(DISTINCT b.batch_number) as batch_number,
+                 MIN(b.manufacturing_date) as manufacturing_date,
+                 MAX(b.ubd) as ubd,
+                 MAX(b.expiry_date) as expiry_date,
+                 MAX(b.shelf_life_days) as shelf_life_days,
+                 SUM(dm.opening_crt) as opening_crt, SUM(dm.opening_pc) as opening_pc, SUM(dm.opening_total) as opening_total,
+                 SUM(dm.production_crt) as production_crt, SUM(dm.production_pc) as production_pc, SUM(dm.production_total) as production_total,
+                 SUM(dm.total_crt) as total_crt, SUM(dm.total_pc) as total_pc, SUM(dm.total_total) as total_total,
+                 SUM(dm.demand_crt) as demand_crt, SUM(dm.demand_pc) as demand_pc, SUM(dm.demand_total) as demand_total,
+                 SUM(dm.sale_crt) as sale_crt, SUM(dm.sale_pc) as sale_pc, SUM(dm.sale_total) as sale_total,
+                 SUM(dm.closing_crt) as closing_crt, SUM(dm.closing_pc) as closing_pc, SUM(dm.closing_total) as closing_total,
+                 SUM(dm.sales_target) as sales_target
           FROM products p
           JOIN batches b ON b.product_id = p.id AND b.date = ?
           JOIN daily_metrics dm ON dm.batch_id = b.id
+          GROUP BY p.id
           ORDER BY p.category, p.name`,
     args: [date],
   })
@@ -165,17 +170,23 @@ export async function getDashboardData(date: string) {
   })
 
   const metricsResult = await turso.execute({
-    sql: `SELECT p.id as product_id, b.batch_number, b.manufacturing_date, b.ubd, b.expiry_date, b.shelf_life_days,
-                 dm.opening_crt, dm.opening_pc, dm.opening_total,
-                 dm.production_crt, dm.production_pc, dm.production_total,
-                 dm.total_crt, dm.total_pc, dm.total_total,
-                 dm.demand_crt, dm.demand_pc, dm.demand_total,
-                 dm.sale_crt, dm.sale_pc, dm.sale_total,
-                 dm.closing_crt, dm.closing_pc, dm.closing_total,
-                 dm.sales_target
+    sql: `SELECT p.id as product_id,
+                 GROUP_CONCAT(DISTINCT b.batch_number) as batch_number,
+                 MIN(b.manufacturing_date) as manufacturing_date,
+                 MAX(b.ubd) as ubd,
+                 MAX(b.expiry_date) as expiry_date,
+                 MAX(b.shelf_life_days) as shelf_life_days,
+                 SUM(dm.opening_crt) as opening_crt, SUM(dm.opening_pc) as opening_pc, SUM(dm.opening_total) as opening_total,
+                 SUM(dm.production_crt) as production_crt, SUM(dm.production_pc) as production_pc, SUM(dm.production_total) as production_total,
+                 SUM(dm.total_crt) as total_crt, SUM(dm.total_pc) as total_pc, SUM(dm.total_total) as total_total,
+                 SUM(dm.demand_crt) as demand_crt, SUM(dm.demand_pc) as demand_pc, SUM(dm.demand_total) as demand_total,
+                 SUM(dm.sale_crt) as sale_crt, SUM(dm.sale_pc) as sale_pc, SUM(dm.sale_total) as sale_total,
+                 SUM(dm.closing_crt) as closing_crt, SUM(dm.closing_pc) as closing_pc, SUM(dm.closing_total) as closing_total,
+                 SUM(dm.sales_target) as sales_target
           FROM products p
           JOIN batches b ON b.product_id = p.id AND b.date = ?
-          JOIN daily_metrics dm ON dm.batch_id = b.id`,
+          JOIN daily_metrics dm ON dm.batch_id = b.id
+          GROUP BY p.id`,
     args: [date],
   })
 

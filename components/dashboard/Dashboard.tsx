@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useMemo } from "react"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Search, Package } from "lucide-react"
+import { Search, Package, Filter } from "lucide-react"
 import DatePeriodSelector, { PeriodSelection } from "@/components/ui/date-period-selector"
 import type { CategoryGroup, Product } from "./types"
 
@@ -21,6 +21,7 @@ export default function Dashboard() {
   const [data, setData] = useState<CategoryGroup[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
+  const [selectedBatch, setSelectedBatch] = useState<string>("all")
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -43,26 +44,51 @@ export default function Dashboard() {
     fetchData()
   }, [fetchData])
 
+  // Extract all unique batch numbers available across products
+  const availableBatches = useMemo(() => {
+    const batches = new Set<string>()
+    data.forEach(group => {
+      group.products.forEach(p => {
+        if (p.batchNumber) {
+          p.batchNumber.split(',').forEach(b => {
+            const trimmed = b.trim()
+            if (trimmed) batches.add(trimmed)
+          })
+        }
+      })
+    })
+    return Array.from(batches).sort()
+  }, [data])
+
   // Aggregate global Current Stock KPIs by Unit
   const stockByUnit = useMemo(() => {
     const summary: Record<string, number> = {}
     data.forEach(group => {
       group.products.forEach(p => {
+        if (selectedBatch !== "all") {
+          if (!p.batchNumber || !p.batchNumber.split(',').map(b => b.trim()).includes(selectedBatch)) {
+            return
+          }
+        }
         const u = p.unit ? p.unit.toUpperCase() : "PCS"
         summary[u] = (summary[u] || 0) + (p.currentStock || 0)
       })
     })
     return summary
-  }, [data])
+  }, [data, selectedBatch])
 
-  // Flattened & filtered products list
+  // Flattened & filtered products list by search query and selected batch
   const allProducts = useMemo(() => {
-    const list: (Product & { category: string })[] = []
+    let list: (Product & { category: string })[] = []
     data.forEach(group => {
       group.products.forEach(p => {
         list.push({ ...p, category: group.category })
       })
     })
+
+    if (selectedBatch !== "all") {
+      list = list.filter(p => p.batchNumber && p.batchNumber.split(',').map(b => b.trim()).includes(selectedBatch))
+    }
 
     if (!searchQuery.trim()) return list
     const q = searchQuery.toLowerCase().trim()
@@ -73,7 +99,7 @@ export default function Dashboard() {
         p.category.toLowerCase().includes(q) ||
         (p.batchNumber && p.batchNumber.toLowerCase().includes(q))
     )
-  }, [data, searchQuery])
+  }, [data, searchQuery, selectedBatch])
 
   const renderUnitSummary = (unitMap: Record<string, number>) => {
     const entries = Object.entries(unitMap).filter(([_, val]) => val > 0)
@@ -113,9 +139,11 @@ export default function Dashboard() {
         </div>
 
         {/* Global Current Stock Summary Card */}
-        <div className="bg-white p-5 rounded-xl border border-black shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="bg-white p-5 rounded-xl border border-neutral-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-neutral-500">Total Live Stock Summary</p>
+            <p className="text-xs font-bold uppercase tracking-wider text-neutral-500">
+              Total Live Stock Summary {selectedBatch !== "all" ? `(Filtered by Batch: ${selectedBatch})` : ""}
+            </p>
             {renderUnitSummary(stockByUnit)}
           </div>
           <Badge variant="outline" className="border-neutral-300 text-black font-mono font-bold text-xs self-start sm:self-auto">
@@ -123,15 +151,34 @@ export default function Dashboard() {
           </Badge>
         </div>
 
-        {/* Global Search Bar */}
-        <div className="relative">
-          <Search className="absolute left-3.5 top-3.5 h-4 w-4 text-black" />
-          <Input
-            placeholder="Search by Product Name, SKU Code (e.g. 1011) or Batch..."
-            className="pl-10 h-11 bg-white text-base rounded-xl border-neutral-300 text-black placeholder:text-neutral-500"
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-          />
+        {/* Search & Batch Filter Toolbar */}
+        <div className="flex flex-col sm:flex-row items-center gap-3">
+          <div className="relative flex-1 w-full">
+            <Search className="absolute left-3.5 top-3.5 h-4 w-4 text-black" />
+            <Input
+              placeholder="Search by Product Name, SKU Code (e.g. 1011) or Batch..."
+              className="pl-10 h-11 bg-white text-base rounded-xl border-neutral-300 text-black placeholder:text-neutral-500"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+            />
+          </div>
+          {availableBatches.length > 0 && (
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <span className="text-xs font-bold text-neutral-600 uppercase whitespace-nowrap flex items-center gap-1">
+                <Filter className="h-3.5 w-3.5" /> Batch:
+              </span>
+              <select
+                value={selectedBatch}
+                onChange={e => setSelectedBatch(e.target.value)}
+                className="h-11 px-3 text-sm font-semibold rounded-xl border border-neutral-300 bg-white text-black focus:outline-none"
+              >
+                <option value="all">All Batches ({availableBatches.length})</option>
+                {availableBatches.map(b => (
+                  <option key={b} value={b}>Batch: {b}</option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
 
         {/* Current Stock Inventory Table */}
@@ -147,7 +194,7 @@ export default function Dashboard() {
                   <th className="py-3.5 px-4">SKU Code</th>
                   <th className="py-3.5 px-4">Product Name</th>
                   <th className="py-3.5 px-4">Category</th>
-                  <th className="py-3.5 px-4">Batch No</th>
+                  <th className="py-3.5 px-4">Batch No(s)</th>
                   <th className="py-3.5 px-4 text-right">Opening</th>
                   <th className="py-3.5 px-4 text-right">Production (+)</th>
                   <th className="py-3.5 px-4 text-right">Sale Out (-)</th>
@@ -160,7 +207,7 @@ export default function Dashboard() {
                   <tr key={p.id} className="hover:bg-neutral-50 transition-colors">
                     <td className="py-3 px-4 font-mono font-bold text-black">
                       {p.skuCode ? (
-                        <Badge variant="outline" className="border-black text-black font-mono">
+                        <Badge variant="outline" className="border-neutral-300 text-black font-mono">
                           {p.skuCode}
                         </Badge>
                       ) : (
@@ -171,9 +218,13 @@ export default function Dashboard() {
                     <td className="py-3 px-4 text-neutral-600 font-semibold">{p.category}</td>
                     <td className="py-3 px-4 font-mono font-semibold">
                       {p.batchNumber ? (
-                        <Badge variant="outline" className="border-black text-black font-mono">
-                          {p.batchNumber}
-                        </Badge>
+                        <div className="flex flex-wrap gap-1">
+                          {p.batchNumber.split(',').map((b, idx) => (
+                            <Badge key={idx} variant="outline" className="border-neutral-300 text-black font-mono text-xs">
+                              {b.trim()}
+                            </Badge>
+                          ))}
+                        </div>
                       ) : (
                         "—"
                       )}
@@ -186,7 +237,7 @@ export default function Dashboard() {
                     </td>
                     <td className="py-3 px-4 text-center">
                       {p.currentStock > 0 ? (
-                        <Badge variant="outline" className="border-black text-black font-bold text-[10px]">IN STOCK</Badge>
+                        <Badge variant="outline" className="border-neutral-300 text-black font-bold text-[10px]">IN STOCK</Badge>
                       ) : (
                         <Badge variant="outline" className="border-neutral-300 text-neutral-400 font-bold text-[10px]">ZERO STOCK</Badge>
                       )}
