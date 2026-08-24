@@ -40,9 +40,11 @@ export default function Dashboard() {
     }
   }, [period])
 
-  useEffect(() => {
+useEffect(() => {
+  queueMicrotask(() => {
     fetchData()
-  }, [fetchData])
+  })
+}, [fetchData])
 
   // Extract all unique batch numbers available across products
   const availableBatches = useMemo(() => {

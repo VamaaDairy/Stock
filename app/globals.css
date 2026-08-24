@@ -94,3 +94,15 @@
     @apply font-sans;
   }
 }
+
+[data-sidebar="menu-button"] {
+  font-size: 0.95rem;
+}
+
+[data-sidebar="menu-button"] span {
+  font-size: 0.95rem;
+}
+
+[data-sidebar="group-label"] {
+  font-size: 0.8rem;
+}
