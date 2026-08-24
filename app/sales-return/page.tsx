@@ -1,17 +1,18 @@
 "use client"
 
-import React, { useEffect, useState, useCallback, useMemo, Fragment } from "react"
+import React, { useState, useEffect, useCallback, useMemo, Fragment } from "react"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Search, Package, Filter, ChevronRight, ChevronDown } from "lucide-react"
+import { Search, RotateCcw, Filter, ChevronRight, ChevronDown } from "lucide-react"
+import AddSalesReturnModal from "@/components/sales-return/AddSalesReturnModal"
 import DatePeriodSelector, { PeriodSelection } from "@/components/ui/date-period-selector"
-import type { CategoryGroup, Product } from "./types"
+import type { CategoryGroup, Product } from "@/components/dashboard/types"
 
 function todayStr() {
   return new Date().toISOString().slice(0, 10)
 }
 
-export default function Dashboard() {
+export default function SalesReturnPage() {
   const [period, setPeriod] = useState<PeriodSelection>({
     mode: "single",
     date: todayStr(),
@@ -42,9 +43,7 @@ export default function Dashboard() {
   }, [period])
 
   useEffect(() => {
-    queueMicrotask(() => {
-      fetchData()
-    })
+    fetchData()
   }, [fetchData])
 
   const toggleProductExpand = (id: string) => {
@@ -56,7 +55,6 @@ export default function Dashboard() {
     })
   }
 
-  // Extract all unique batch numbers available across products
   const availableBatches = useMemo(() => {
     const batches = new Set<string>()
     data.forEach(group => {
@@ -72,7 +70,6 @@ export default function Dashboard() {
     return Array.from(batches).sort()
   }, [data])
 
-  // Flattened & filtered products list by search query and selected batch
   const allProducts = useMemo(() => {
     let list: (Product & { category: string })[] = []
     data.forEach(group => {
@@ -96,23 +93,21 @@ export default function Dashboard() {
     )
   }, [data, searchQuery, selectedBatch])
 
-
-
   const currentDateLabel = period.mode === "range" ? `${period.fromDate} to ${period.toDate}` : period.date
 
   return (
-    <div className="min-h-screen bg-white text-black px-4 py-6 pb-20">
-      <div className="max-w-6xl mx-auto space-y-6">
+    <div className="flex flex-col flex-1 p-6 md:p-8 bg-white text-black min-h-screen">
+      <div className="max-w-6xl mx-auto w-full space-y-6">
         
-        {/* Top Header & Period Selector */}
+        {/* Header & Date Selector */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-neutral-200 shadow-xs">
           <div>
             <h1 className="text-3xl font-black tracking-tight text-black flex items-center gap-2">
-              <Package className="h-8 w-8" />
-              Current Stock Inventory
+              <RotateCcw className="h-8 w-8" />
+              Sales Return Management
             </h1>
             <p className="text-xs text-neutral-600 mt-1">
-              Live Stock Balance = Opening + Production − Sale Dispatches (<span className="font-bold text-black">{currentDateLabel}</span>)
+              Showing Sales Return Entries for Date: <span className="font-bold text-black">{currentDateLabel}</span>
             </p>
           </div>
           <div className="self-start lg:self-auto">
@@ -120,14 +115,12 @@ export default function Dashboard() {
           </div>
         </div>
 
-
-
-        {/* Search & Batch Filter Toolbar */}
+        {/* Search & Batch Filter */}
         <div className="flex flex-col sm:flex-row items-center gap-3">
           <div className="relative flex-1 w-full">
             <Search className="absolute left-3.5 top-3.5 h-4 w-4 text-black" />
             <Input
-              placeholder="Search by Product Name, SKU Code (e.g. 1011) or Batch..."
+              placeholder="Search product name, SKU (e.g. 1011) or batch..."
               className="pl-10 h-11 bg-white text-base rounded-xl border-neutral-300 text-black placeholder:text-neutral-500"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
@@ -152,10 +145,10 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Current Stock Inventory Table */}
+        {/* Table */}
         {loading ? (
           <div className="bg-white p-12 rounded-xl border border-neutral-200 text-center text-black">
-            <p className="text-base font-semibold animate-pulse">Loading current stock data...</p>
+            <p className="text-base font-semibold animate-pulse">Loading sales return data...</p>
           </div>
         ) : (
           <div className="border border-neutral-200 rounded-xl overflow-hidden bg-white shadow-xs">
@@ -166,21 +159,21 @@ export default function Dashboard() {
                   <th className="py-3.5 px-4">SKU Code</th>
                   <th className="py-3.5 px-4">Product Name</th>
                   <th className="py-3.5 px-4">Category</th>
-                  <th className="py-3.5 px-4 text-right font-black text-black">Currently Available Stock</th>
-                  <th className="py-3.5 px-4 text-center">Status</th>
+                  <th className="py-3.5 px-4 text-right font-black text-black">Total Sales Return</th>
+                  <th className="py-3.5 px-4 text-center">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-200">
                 {allProducts.map(p => {
                   const isExpanded = expandedProductIds.has(p.id)
                   const activeBatches = p.batchesList
-                    ? p.batchesList.filter(b => b.closing.total > 0 || b.production.total > 0 || b.sale.total > 0)
+                    ? p.batchesList.filter(b => b.salesReturn && b.salesReturn.total > 0)
                     : []
                   const hasBatches = activeBatches.length > 0
 
                   return (
                     <Fragment key={p.id}>
-                      {/* Primary Summary Row */}
+                      {/* Main Summary Row */}
                       <tr
                         onClick={() => toggleProductExpand(p.id)}
                         className="hover:bg-neutral-50 transition-colors cursor-pointer select-none"
@@ -206,21 +199,21 @@ export default function Dashboard() {
                             <span>{p.name}</span>
                             {hasBatches && (
                               <span className="text-[10px] text-neutral-500 font-semibold bg-neutral-100 px-1.5 py-0.5 rounded border border-neutral-200">
-                                {p.batchesList!.length} batch{p.batchesList!.length > 1 ? "es" : ""}
+                                {activeBatches.length} batch{activeBatches.length > 1 ? "es" : ""}
                               </span>
                             )}
                           </div>
                         </td>
                         <td className="py-3 px-4 text-neutral-600 font-semibold">{p.category}</td>
                         <td className="py-3 px-4 text-right font-black text-base text-black">
-                          {p.currentStock.toLocaleString()} {p.unit}
-                        </td>
-                        <td className="py-3 px-4 text-center">
-                          {p.currentStock > 0 ? (
-                            <Badge variant="outline" className="border-neutral-300 text-black font-bold text-[10px]">IN STOCK</Badge>
+                          {p.salesReturn && p.salesReturn.total > 0 ? (
+                            <span>{p.salesReturn.total.toLocaleString()} {p.unit}</span>
                           ) : (
-                            <Badge variant="outline" className="border-neutral-300 text-neutral-400 font-bold text-[10px]">ZERO STOCK</Badge>
+                            <span className="text-neutral-400 font-normal">0 {p.unit}</span>
                           )}
+                        </td>
+                        <td className="py-3 px-4 text-center" onClick={e => e.stopPropagation()}>
+                          <AddSalesReturnModal product={p} date={period.date} onSaved={fetchData} />
                         </td>
                       </tr>
 
@@ -236,7 +229,7 @@ export default function Dashboard() {
                                       <th className="py-2.5 px-3">Batch No</th>
                                       <th className="py-2.5 px-3">Mfg Date</th>
                                       <th className="py-2.5 px-3">Expiry Date</th>
-                                      <th className="py-2.5 px-3 text-right font-black text-black">Available Stock</th>
+                                      <th className="py-2.5 px-3 text-right font-black text-black">Sales Return Quantity</th>
                                     </tr>
                                   </thead>
                                   <tbody className="divide-y divide-neutral-200">
@@ -251,14 +244,14 @@ export default function Dashboard() {
                                           <td className="py-2 px-3 text-neutral-600 font-medium">{b.manufacturingDate || "—"}</td>
                                           <td className="py-2 px-3 text-neutral-600 font-medium">{b.expiryDate || "—"}</td>
                                           <td className="py-2 px-3 text-right font-black text-sm text-black">
-                                            {b.closing.total.toLocaleString()} {p.unit}
+                                            +{b.salesReturn.total.toLocaleString()} {p.unit}
                                           </td>
                                         </tr>
                                       ))
                                     ) : (
                                       <tr>
                                         <td colSpan={4} className="py-3 px-4 text-center text-neutral-500 font-medium">
-                                          No individual batch entry recorded for this product.
+                                          No sales return entry recorded for date {currentDateLabel}.
                                         </td>
                                       </tr>
                                     )}

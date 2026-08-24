@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation"
 import Link from "next/link"
-import { Home, Info, LayoutDashboard, Settings, Package, Factory, ShoppingCart, Truck, User } from "lucide-react"
+import { Home, Info, LayoutDashboard, Settings, Package, Factory, ShoppingCart, Truck, RotateCcw, User } from "lucide-react"
 import {
   Sidebar,
   SidebarContent,
@@ -20,6 +20,7 @@ const pages = [
   { name: "Production", href: "/production", icon: Factory },
   { name: "Demand", href: "/demand", icon: ShoppingCart },
   { name: "Sales", href: "/sales", icon: Truck },
+  { name: "Sales Return", href: "/sales-return", icon: RotateCcw },
   { name: "Products", href: "/products", icon: Package },
   { name: "About", href: "/about", icon: Info },
   { name: "Settings", href: "/settings", icon: Settings },

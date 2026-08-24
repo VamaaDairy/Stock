@@ -18,7 +18,6 @@ interface EntryInput {
   production: Qty
   demand: Qty
   sale: Qty
-  salesReturn?: Qty
   salesTarget?: number
   notes?: string
 }
@@ -33,11 +32,30 @@ async function getPreviousClosing(productId: string, date: string): Promise<Qty>
           )`,
     args: [productId, productId, date],
   })
-
   if (result.rows.length === 0 || result.rows[0].closing_total === null) {
     return { crt: 0, pc: 0, total: 0 }
   }
+  const row = result.rows[0]
+  return {
+    crt: Number(row.closing_crt || 0),
+    pc: Number(row.closing_pc || 0),
+    total: Number(row.closing_total || 0),
+  }
+}
 
+async function getPreviousClosingForBatch(productId: string, batchNumber: string, date: string): Promise<Qty> {
+  const result = await turso.execute({
+    sql: `SELECT dm.closing_crt, dm.closing_pc, dm.closing_total
+          FROM daily_metrics dm
+          JOIN batches b ON b.id = dm.batch_id
+          WHERE b.product_id = ? AND b.batch_number = ? AND b.date = (
+            SELECT MAX(b2.date) FROM batches b2 WHERE b2.product_id = ? AND b2.batch_number = ? AND b2.date < ?
+          )`,
+    args: [productId, batchNumber, productId, batchNumber, date],
+  })
+  if (result.rows.length === 0 || result.rows[0].closing_total === null) {
+    return { crt: 0, pc: 0, total: 0 }
+  }
   const row = result.rows[0]
   return {
     crt: Number(row.closing_crt || 0),
@@ -59,12 +77,10 @@ export async function upsertEntry(input: EntryInput) {
     production,
     demand,
     sale,
-    salesReturn = { crt: 0, pc: 0, total: 0 },
     salesTarget = 0,
     notes,
   } = input
 
-  // If skuCode was edited/provided, update product master
   if (skuCode !== undefined) {
     await turso.execute({
       sql: `UPDATE products SET sku_code = ? WHERE id = ?`,
@@ -109,7 +125,6 @@ export async function upsertEntry(input: EntryInput) {
               production_crt = ?, production_pc = ?, production_total = ?,
               demand_crt = ?, demand_pc = ?, demand_total = ?,
               sale_crt = ?, sale_pc = ?, sale_total = ?,
-              sales_return_crt = ?, sales_return_pc = ?, sales_return_total = ?,
               sales_target = ?, notes = ?, updated_at = datetime('now')
             WHERE batch_id = ?`,
       args: [
@@ -117,7 +132,6 @@ export async function upsertEntry(input: EntryInput) {
         production.crt, production.pc, production.total,
         demand.crt, demand.pc, demand.total,
         sale.crt, sale.pc, sale.total,
-        salesReturn.crt, salesReturn.pc, salesReturn.total,
         salesTarget, notes ?? null, batchId,
       ],
     })
@@ -127,17 +141,14 @@ export async function upsertEntry(input: EntryInput) {
               (id, batch_id, opening_crt, opening_pc, opening_total,
                production_crt, production_pc, production_total,
                demand_crt, demand_pc, demand_total,
-               sale_crt, sale_pc, sale_total,
-               sales_return_crt, sales_return_pc, sales_return_total,
-               sales_target, notes)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+               sale_crt, sale_pc, sale_total, sales_target, notes)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       args: [
         crypto.randomUUID(), batchId,
         opening.crt, opening.pc, opening.total,
         production.crt, production.pc, production.total,
         demand.crt, demand.pc, demand.total,
         sale.crt, sale.pc, sale.total,
-        salesReturn.crt, salesReturn.pc, salesReturn.total,
         salesTarget, notes ?? null,
       ],
     })
@@ -159,7 +170,6 @@ export async function getMetricsForDate(date: string) {
                  SUM(dm.total_crt) as total_crt, SUM(dm.total_pc) as total_pc, SUM(dm.total_total) as total_total,
                  SUM(dm.demand_crt) as demand_crt, SUM(dm.demand_pc) as demand_pc, SUM(dm.demand_total) as demand_total,
                  SUM(dm.sale_crt) as sale_crt, SUM(dm.sale_pc) as sale_pc, SUM(dm.sale_total) as sale_total,
-                 SUM(dm.sales_return_crt) as sales_return_crt, SUM(dm.sales_return_pc) as sales_return_pc, SUM(dm.sales_return_total) as sales_return_total,
                  SUM(dm.closing_crt) as closing_crt, SUM(dm.closing_pc) as closing_pc, SUM(dm.closing_total) as closing_total,
                  SUM(dm.sales_target) as sales_target
           FROM products p
@@ -189,7 +199,6 @@ export async function getDashboardData(date: string) {
                  SUM(dm.total_crt) as total_crt, SUM(dm.total_pc) as total_pc, SUM(dm.total_total) as total_total,
                  SUM(dm.demand_crt) as demand_crt, SUM(dm.demand_pc) as demand_pc, SUM(dm.demand_total) as demand_total,
                  SUM(dm.sale_crt) as sale_crt, SUM(dm.sale_pc) as sale_pc, SUM(dm.sale_total) as sale_total,
-                 SUM(dm.sales_return_crt) as sales_return_crt, SUM(dm.sales_return_pc) as sales_return_pc, SUM(dm.sales_return_total) as sales_return_total,
                  SUM(dm.closing_crt) as closing_crt, SUM(dm.closing_pc) as closing_pc, SUM(dm.closing_total) as closing_total,
                  SUM(dm.sales_target) as sales_target
           FROM products p
@@ -199,14 +208,13 @@ export async function getDashboardData(date: string) {
     args: [date],
   })
 
-  // Fetch individual batch breakdowns for that date
-  const batchBreakdownResult = await turso.execute({
-    sql: `SELECT b.product_id, b.batch_number, b.manufacturing_date, b.ubd, b.expiry_date, b.shelf_life_days,
+  const batchRowsResult = await turso.execute({
+    sql: `SELECT b.product_id, b.batch_number,
+                 b.manufacturing_date, b.ubd, b.expiry_date,
                  dm.opening_crt, dm.opening_pc, dm.opening_total,
                  dm.production_crt, dm.production_pc, dm.production_total,
                  dm.demand_crt, dm.demand_pc, dm.demand_total,
                  dm.sale_crt, dm.sale_pc, dm.sale_total,
-                 dm.sales_return_crt, dm.sales_return_pc, dm.sales_return_total,
                  dm.closing_crt, dm.closing_pc, dm.closing_total
           FROM batches b
           JOIN daily_metrics dm ON dm.batch_id = b.id
@@ -216,21 +224,19 @@ export async function getDashboardData(date: string) {
   })
 
   const batchesByProduct = new Map<string, any[]>()
-  for (const row of batchBreakdownResult.rows) {
+  for (const row of batchRowsResult.rows) {
     const pid = String(row.product_id)
     if (!batchesByProduct.has(pid)) batchesByProduct.set(pid, [])
     batchesByProduct.get(pid)!.push({
-      batchNumber: String(row.batch_number || ""),
+      batchNumber: String(row.batch_number),
       manufacturingDate: row.manufacturing_date ? String(row.manufacturing_date) : null,
       ubd: row.ubd ? String(row.ubd) : null,
       expiryDate: row.expiry_date ? String(row.expiry_date) : null,
-      shelfLifeDays: row.shelf_life_days !== null ? Number(row.shelf_life_days) : null,
-      opening: { crt: Number(row.opening_crt ?? 0), pc: Number(row.opening_pc ?? 0), total: Number(row.opening_total ?? 0) },
-      production: { crt: Number(row.production_crt ?? 0), pc: Number(row.production_pc ?? 0), total: Number(row.production_total ?? 0) },
-      demand: { crt: Number(row.demand_crt ?? 0), pc: Number(row.demand_pc ?? 0), total: Number(row.demand_total ?? 0) },
-      sale: { crt: Number(row.sale_crt ?? 0), pc: Number(row.sale_pc ?? 0), total: Number(row.sale_total ?? 0) },
-      salesReturn: { crt: Number(row.sales_return_crt ?? 0), pc: Number(row.sales_return_pc ?? 0), total: Number(row.sales_return_total ?? 0) },
-      closing: { crt: Number(row.closing_crt ?? 0), pc: Number(row.closing_pc ?? 0), total: Number(row.closing_total ?? 0) },
+      opening: { crt: Number(row.opening_crt || 0), pc: Number(row.opening_pc || 0), total: Number(row.opening_total || 0) },
+      production: { crt: Number(row.production_crt || 0), pc: Number(row.production_pc || 0), total: Number(row.production_total || 0) },
+      demand: { crt: Number(row.demand_crt || 0), pc: Number(row.demand_pc || 0), total: Number(row.demand_total || 0) },
+      sale: { crt: Number(row.sale_crt || 0), pc: Number(row.sale_pc || 0), total: Number(row.sale_total || 0) },
+      currentStock: Number(row.closing_total || 0),
     })
   }
 
@@ -269,11 +275,10 @@ export async function getDashboardData(date: string) {
       production: { crt: Number(metrics?.production_crt ?? 0), pc: Number(metrics?.production_pc ?? 0), total: Number(metrics?.production_total ?? 0) },
       demand: { crt: Number(metrics?.demand_crt ?? 0), pc: Number(metrics?.demand_pc ?? 0), total: Number(metrics?.demand_total ?? 0) },
       sale: { crt: Number(metrics?.sale_crt ?? 0), pc: Number(metrics?.sale_pc ?? 0), total: Number(metrics?.sale_total ?? 0) },
-      salesReturn: { crt: Number(metrics?.sales_return_crt ?? 0), pc: Number(metrics?.sales_return_pc ?? 0), total: Number(metrics?.sales_return_total ?? 0) },
       closing: { crt: Number(metrics?.closing_crt ?? 0), pc: Number(metrics?.closing_pc ?? 0), total: closingTotal },
       salesTarget: Number(metrics?.sales_target ?? 0),
       currentStock: closingTotal,
-      batchesList: batchesByProduct.get(productId) || [],
+      batches: batchesByProduct.get(productId) || [],
     })
   }
 
@@ -308,9 +313,6 @@ export async function getPeriodDashboardData(startDate: string, endDate: string)
                  SUM(dm.sale_crt) as sale_crt,
                  SUM(dm.sale_pc) as sale_pc,
                  SUM(dm.sale_total) as sale_total,
-                 SUM(dm.sales_return_crt) as sales_return_crt,
-                 SUM(dm.sales_return_pc) as sales_return_pc,
-                 SUM(dm.sales_return_total) as sales_return_total,
                  SUM(dm.sales_target) as sales_target
           FROM products p
           JOIN batches b ON b.product_id = p.id AND b.date >= ? AND b.date <= ?
@@ -319,15 +321,13 @@ export async function getPeriodDashboardData(startDate: string, endDate: string)
     args: [startDate, endDate],
   })
 
-  // Fetch batch details for period
-  const batchBreakdownResult = await turso.execute({
-    sql: `SELECT b.product_id, b.batch_number, b.manufacturing_date, b.ubd, b.expiry_date, b.shelf_life_days,
-                 SUM(dm.opening_crt) as opening_crt, SUM(dm.opening_pc) as opening_pc, SUM(dm.opening_total) as opening_total,
+  const batchRowsResult = await turso.execute({
+    sql: `SELECT b.product_id, b.batch_number,
+                 MIN(b.manufacturing_date) as manufacturing_date,
+                 MAX(b.ubd) as ubd, MAX(b.expiry_date) as expiry_date,
                  SUM(dm.production_crt) as production_crt, SUM(dm.production_pc) as production_pc, SUM(dm.production_total) as production_total,
                  SUM(dm.demand_crt) as demand_crt, SUM(dm.demand_pc) as demand_pc, SUM(dm.demand_total) as demand_total,
-                 SUM(dm.sale_crt) as sale_crt, SUM(dm.sale_pc) as sale_pc, SUM(dm.sale_total) as sale_total,
-                 SUM(dm.sales_return_crt) as sales_return_crt, SUM(dm.sales_return_pc) as sales_return_pc, SUM(dm.sales_return_total) as sales_return_total,
-                 SUM(dm.closing_crt) as closing_crt, SUM(dm.closing_pc) as closing_pc, SUM(dm.closing_total) as closing_total
+                 SUM(dm.sale_crt) as sale_crt, SUM(dm.sale_pc) as sale_pc, SUM(dm.sale_total) as sale_total
           FROM batches b
           JOIN daily_metrics dm ON dm.batch_id = b.id
           WHERE b.date >= ? AND b.date <= ?
@@ -337,21 +337,23 @@ export async function getPeriodDashboardData(startDate: string, endDate: string)
   })
 
   const batchesByProduct = new Map<string, any[]>()
-  for (const row of batchBreakdownResult.rows) {
+  for (const row of batchRowsResult.rows) {
     const pid = String(row.product_id)
+    const batchNumber = String(row.batch_number)
+    const opening = await getPreviousClosingForBatch(pid, batchNumber, startDate)
+    const prodTotal = Number(row.production_total || 0)
+    const saleTotal = Number(row.sale_total || 0)
     if (!batchesByProduct.has(pid)) batchesByProduct.set(pid, [])
     batchesByProduct.get(pid)!.push({
-      batchNumber: String(row.batch_number || ""),
+      batchNumber,
       manufacturingDate: row.manufacturing_date ? String(row.manufacturing_date) : null,
       ubd: row.ubd ? String(row.ubd) : null,
       expiryDate: row.expiry_date ? String(row.expiry_date) : null,
-      shelfLifeDays: row.shelf_life_days !== null ? Number(row.shelf_life_days) : null,
-      opening: { crt: Number(row.opening_crt ?? 0), pc: Number(row.opening_pc ?? 0), total: Number(row.opening_total ?? 0) },
-      production: { crt: Number(row.production_crt ?? 0), pc: Number(row.production_pc ?? 0), total: Number(row.production_total ?? 0) },
-      demand: { crt: Number(row.demand_crt ?? 0), pc: Number(row.demand_pc ?? 0), total: Number(row.demand_total ?? 0) },
-      sale: { crt: Number(row.sale_crt ?? 0), pc: Number(row.sale_pc ?? 0), total: Number(row.sale_total ?? 0) },
-      salesReturn: { crt: Number(row.sales_return_crt ?? 0), pc: Number(row.sales_return_pc ?? 0), total: Number(row.sales_return_total ?? 0) },
-      closing: { crt: Number(row.closing_crt ?? 0), pc: Number(row.closing_pc ?? 0), total: Number(row.closing_total ?? 0) },
+      opening,
+      production: { crt: Number(row.production_crt || 0), pc: Number(row.production_pc || 0), total: prodTotal },
+      demand: { crt: Number(row.demand_crt || 0), pc: Number(row.demand_pc || 0), total: Number(row.demand_total || 0) },
+      sale: { crt: Number(row.sale_crt || 0), pc: Number(row.sale_pc || 0), total: saleTotal },
+      currentStock: opening.total + prodTotal - saleTotal,
     })
   }
 
@@ -371,8 +373,7 @@ export async function getPeriodDashboardData(startDate: string, endDate: string)
     const opening = await getPreviousClosing(productId, startDate)
     const prodTotal = Number(metrics?.production_total ?? 0)
     const saleTotal = Number(metrics?.sale_total ?? 0)
-    const salesReturnTotal = Number(metrics?.sales_return_total ?? 0)
-    const closingTotal = opening.total + prodTotal + salesReturnTotal - saleTotal
+    const closingTotal = opening.total + prodTotal - saleTotal
 
     const effectiveShelfLife = metrics?.shelf_life_days !== null && metrics?.shelf_life_days !== undefined
       ? Number(metrics.shelf_life_days)
@@ -394,11 +395,10 @@ export async function getPeriodDashboardData(startDate: string, endDate: string)
       production: { crt: Number(metrics?.production_crt ?? 0), pc: Number(metrics?.production_pc ?? 0), total: prodTotal },
       demand: { crt: Number(metrics?.demand_crt ?? 0), pc: Number(metrics?.demand_pc ?? 0), total: Number(metrics?.demand_total ?? 0) },
       sale: { crt: Number(metrics?.sale_crt ?? 0), pc: Number(metrics?.sale_pc ?? 0), total: saleTotal },
-      salesReturn: { crt: Number(metrics?.sales_return_crt ?? 0), pc: Number(metrics?.sales_return_pc ?? 0), total: salesReturnTotal },
       closing: { crt: 0, pc: 0, total: closingTotal },
       salesTarget: Number(metrics?.sales_target ?? 0),
       currentStock: closingTotal,
-      batchesList: batchesByProduct.get(productId) || [],
+      batches: batchesByProduct.get(productId) || [],
     })
   }
 

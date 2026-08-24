@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Search, ShoppingCart, Filter } from "lucide-react"
+import { Search, ShoppingCart } from "lucide-react"
 import AddDemandModal from "@/components/demand/AddDemandModal"
 import DatePeriodSelector, { PeriodSelection } from "@/components/ui/date-period-selector"
 import type { CategoryGroup, Product } from "@/components/dashboard/types"
@@ -22,7 +22,6 @@ export default function DemandPage() {
   const [data, setData] = useState<CategoryGroup[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
-  const [selectedBatch, setSelectedBatch] = useState<string>("all")
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -45,21 +44,6 @@ export default function DemandPage() {
     fetchData()
   }, [fetchData])
 
-  const availableBatches = useMemo(() => {
-    const batches = new Set<string>()
-    data.forEach(group => {
-      group.products.forEach(p => {
-        if (p.batchNumber) {
-          p.batchNumber.split(',').forEach(b => {
-            const trimmed = b.trim()
-            if (trimmed) batches.add(trimmed)
-          })
-        }
-      })
-    })
-    return Array.from(batches).sort()
-  }, [data])
-
   const allProducts = useMemo(() => {
     let list: (Product & { category: string })[] = []
     data.forEach(group => {
@@ -68,20 +52,15 @@ export default function DemandPage() {
       })
     })
 
-    if (selectedBatch !== "all") {
-      list = list.filter(p => p.batchNumber && p.batchNumber.split(',').map(b => b.trim()).includes(selectedBatch))
-    }
-
     if (!searchQuery.trim()) return list
     const q = searchQuery.toLowerCase().trim()
     return list.filter(
       p =>
         p.name.toLowerCase().includes(q) ||
         p.skuCode.toLowerCase().includes(q) ||
-        p.category.toLowerCase().includes(q) ||
-        (p.batchNumber && p.batchNumber.toLowerCase().includes(q))
+        p.category.toLowerCase().includes(q)
     )
-  }, [data, searchQuery, selectedBatch])
+  }, [data, searchQuery])
 
   const currentDateLabel = period.mode === "range" ? `${period.fromDate} to ${period.toDate}` : period.date
 
@@ -97,7 +76,7 @@ export default function DemandPage() {
               Daily Demand Management
             </h1>
             <p className="text-xs text-neutral-600 mt-1">
-              Period: <span className="font-bold text-black">{currentDateLabel}</span>
+              Showing Demand Entries for Date: <span className="font-bold text-black">{currentDateLabel}</span>
             </p>
           </div>
           <div className="self-start lg:self-auto">
@@ -105,37 +84,20 @@ export default function DemandPage() {
           </div>
         </div>
 
-        {/* Search & Batch Filter */}
-        <div className="flex flex-col sm:flex-row items-center gap-3">
+        {/* Search Bar */}
+        <div className="flex items-center gap-3">
           <div className="relative flex-1 w-full">
             <Search className="absolute left-3.5 top-3.5 h-4 w-4 text-black" />
             <Input
-              placeholder="Search product name, SKU (e.g. 1011) or batch..."
+              placeholder="Search product name, SKU Code (e.g. 1011) or Category..."
               className="pl-10 h-11 bg-white text-base rounded-xl border-neutral-300 text-black placeholder:text-neutral-500"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
             />
           </div>
-          {availableBatches.length > 0 && (
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              <span className="text-xs font-bold text-neutral-600 uppercase whitespace-nowrap flex items-center gap-1">
-                <Filter className="h-3.5 w-3.5" /> Batch:
-              </span>
-              <select
-                value={selectedBatch}
-                onChange={e => setSelectedBatch(e.target.value)}
-                className="h-11 px-3 text-sm font-semibold rounded-xl border border-neutral-300 bg-white text-black focus:outline-none"
-              >
-                <option value="all">All Batches ({availableBatches.length})</option>
-                {availableBatches.map(b => (
-                  <option key={b} value={b}>Batch: {b}</option>
-                ))}
-              </select>
-            </div>
-          )}
         </div>
 
-        {/* Table */}
+        {/* Demand Table */}
         {loading ? (
           <div className="bg-white p-12 rounded-xl border border-neutral-200 text-center text-black">
             <p className="text-base font-semibold animate-pulse">Loading demand data...</p>
@@ -148,11 +110,8 @@ export default function DemandPage() {
                   <th className="py-3.5 px-4">SKU Code</th>
                   <th className="py-3.5 px-4">Product Name</th>
                   <th className="py-3.5 px-4">Category</th>
-                  <th className="py-3.5 px-4">Batch No(s)</th>
-                  <th className="py-3.5 px-4 text-right">Demand Crt</th>
-                  <th className="py-3.5 px-4 text-right">Demand Pc</th>
-                  <th className="py-3.5 px-4 text-right font-black">Total Demand</th>
-                  <th className="py-3.5 px-4 text-right">Current Stock</th>
+                  <th className="py-3.5 px-4 text-right font-black text-black">Total Demand</th>
+                  <th className="py-3.5 px-4 text-right font-bold text-black">Current Stock</th>
                   <th className="py-3.5 px-4 text-center">Action</th>
                 </tr>
               </thead>
@@ -170,25 +129,14 @@ export default function DemandPage() {
                     </td>
                     <td className="py-3 px-4 font-bold text-black">{p.name}</td>
                     <td className="py-3 px-4 text-neutral-600 font-semibold">{p.category}</td>
-                    <td className="py-3 px-4 font-mono font-semibold">
-                      {p.batchNumber ? (
-                        <div className="flex flex-wrap gap-1">
-                          {p.batchNumber.split(',').map((b, idx) => (
-                            <Badge key={idx} variant="outline" className="border-neutral-300 text-black font-mono text-xs">
-                              {b.trim()}
-                            </Badge>
-                          ))}
-                        </div>
+                    <td className="py-3 px-4 text-right font-black text-base text-black">
+                      {p.demand.total > 0 ? (
+                        <span>{p.demand.total.toLocaleString()} {p.unit}</span>
                       ) : (
-                        "—"
+                        <span className="text-neutral-400 font-normal">0 {p.unit}</span>
                       )}
                     </td>
-                    <td className="py-3 px-4 text-right font-semibold">{p.demand.crt}</td>
-                    <td className="py-3 px-4 text-right font-semibold">{p.demand.pc}</td>
-                    <td className="py-3 px-4 text-right font-black text-base">
-                      {p.demand.total.toLocaleString()} {p.unit}
-                    </td>
-                    <td className="py-3 px-4 text-right font-bold">
+                    <td className="py-3 px-4 text-right font-black text-base text-black">
                       {p.currentStock.toLocaleString()} {p.unit}
                     </td>
                     <td className="py-3 px-4 text-center">

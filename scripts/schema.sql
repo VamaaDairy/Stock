@@ -38,7 +38,7 @@ CREATE INDEX IF NOT EXISTS idx_batches_product_date ON batches(product_id, date)
 CREATE INDEX IF NOT EXISTS idx_batches_date ON batches(date);
 CREATE INDEX IF NOT EXISTS idx_batches_batch_number ON batches(batch_number);
 
--- 3. DAILY_METRICS TABLE (Inventory Flow: Opening -> Production -> Demand -> Sale -> Closing)
+-- 3. DAILY_METRICS TABLE (Inventory Flow: Opening -> Production -> Sales Return -> Demand -> Sale -> Closing)
 CREATE TABLE IF NOT EXISTS daily_metrics (
   id TEXT PRIMARY KEY,                       -- UUID
   batch_id TEXT NOT NULL UNIQUE REFERENCES batches(id) ON DELETE CASCADE,
@@ -63,18 +63,23 @@ CREATE TABLE IF NOT EXISTS daily_metrics (
   sale_pc REAL NOT NULL DEFAULT 0,           -- Dispatch Sale Loose Pieces
   sale_total REAL NOT NULL DEFAULT 0,        -- Dispatch Sale Total Primary Quantity
 
+  -- DAILY SALES RETURN (Returned Stock IN - Increases Stock Balance)
+  sales_return_crt REAL NOT NULL DEFAULT 0,  -- Sales Return Crates / Boxes
+  sales_return_pc REAL NOT NULL DEFAULT 0,   -- Sales Return Loose Pieces
+  sales_return_total REAL NOT NULL DEFAULT 0, -- Sales Return Total Primary Quantity
+
   -- TARGET METRICS
   sales_target REAL NOT NULL DEFAULT 0,      -- Sales Target Quantity
 
-  -- TOTAL AVAILABLE = Opening + Production (Stored Auto-Column)
-  total_crt REAL GENERATED ALWAYS AS (opening_crt + production_crt) STORED,
-  total_pc REAL GENERATED ALWAYS AS (opening_pc + production_pc) STORED,
-  total_total REAL GENERATED ALWAYS AS (opening_total + production_total) STORED,
+  -- TOTAL AVAILABLE = Opening + Production + Sales Return (Stored Auto-Column)
+  total_crt REAL GENERATED ALWAYS AS (opening_crt + production_crt + sales_return_crt) STORED,
+  total_pc REAL GENERATED ALWAYS AS (opening_pc + production_pc + sales_return_pc) STORED,
+  total_total REAL GENERATED ALWAYS AS (opening_total + production_total + sales_return_total) STORED,
 
   -- CLOSING STOCK BALANCE = Total Available - Sale (Stored Auto-Column)
-  closing_crt REAL GENERATED ALWAYS AS (opening_crt + production_crt - sale_crt) STORED,
-  closing_pc REAL GENERATED ALWAYS AS (opening_pc + production_pc - sale_pc) STORED,
-  closing_total REAL GENERATED ALWAYS AS (opening_total + production_total - sale_total) STORED,
+  closing_crt REAL GENERATED ALWAYS AS (opening_crt + production_crt + sales_return_crt - sale_crt) STORED,
+  closing_pc REAL GENERATED ALWAYS AS (opening_pc + production_pc + sales_return_pc - sale_pc) STORED,
+  closing_total REAL GENERATED ALWAYS AS (opening_total + production_total + sales_return_total - sale_total) STORED,
 
   notes TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),

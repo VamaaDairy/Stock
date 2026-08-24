@@ -1,9 +1,9 @@
 "use client"
 
-import { useState, useEffect, useCallback, useMemo } from "react"
+import React, { useState, useEffect, useCallback, useMemo, Fragment } from "react"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Search, Factory, Filter } from "lucide-react"
+import { Search, Factory, Filter, ChevronRight, ChevronDown } from "lucide-react"
 import AddProductionModal from "@/components/production/AddProductionModal"
 import DatePeriodSelector, { PeriodSelection } from "@/components/ui/date-period-selector"
 import type { CategoryGroup, Product } from "@/components/dashboard/types"
@@ -23,6 +23,7 @@ export default function ProductionPage() {
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedBatch, setSelectedBatch] = useState<string>("all")
+  const [expandedProductIds, setExpandedProductIds] = useState<Set<string>>(new Set())
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -44,6 +45,15 @@ export default function ProductionPage() {
   useEffect(() => {
     fetchData()
   }, [fetchData])
+
+  const toggleProductExpand = (id: string) => {
+    setExpandedProductIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
 
   const availableBatches = useMemo(() => {
     const batches = new Set<string>()
@@ -97,7 +107,7 @@ export default function ProductionPage() {
               Daily Production Management
             </h1>
             <p className="text-xs text-neutral-600 mt-1">
-              Period: <span className="font-bold text-black">{currentDateLabel}</span>
+              Showing Production Entries for Date: <span className="font-bold text-black">{currentDateLabel}</span>
             </p>
           </div>
           <div className="self-start lg:self-auto">
@@ -145,55 +155,116 @@ export default function ProductionPage() {
             <table className="w-full text-left text-sm">
               <thead className="bg-neutral-100 text-black text-xs uppercase font-bold tracking-wider border-b border-neutral-200">
                 <tr>
+                  <th className="py-3.5 px-3 w-10 text-center"></th>
                   <th className="py-3.5 px-4">SKU Code</th>
                   <th className="py-3.5 px-4">Product Name</th>
                   <th className="py-3.5 px-4">Category</th>
-                  <th className="py-3.5 px-4">Batch No(s)</th>
-                  <th className="py-3.5 px-4">Mfg Date</th>
-                  <th className="py-3.5 px-4 text-right">Crt / Box</th>
-                  <th className="py-3.5 px-4 text-right">Pcs</th>
-                  <th className="py-3.5 px-4 text-right font-black">Total Output</th>
+                  <th className="py-3.5 px-4 text-right font-black text-black">Production Output</th>
                   <th className="py-3.5 px-4 text-center">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-200">
-                {allProducts.map(p => (
-                  <tr key={p.id} className="hover:bg-neutral-50 transition-colors">
-                    <td className="py-3 px-4 font-mono font-bold text-black">
-                      {p.skuCode ? (
-                        <Badge variant="outline" className="border-neutral-300 text-black font-mono">
-                          {p.skuCode}
-                        </Badge>
-                      ) : (
-                        "—"
-                      )}
-                    </td>
-                    <td className="py-3 px-4 font-bold text-black">{p.name}</td>
-                    <td className="py-3 px-4 text-neutral-600 font-semibold">{p.category}</td>
-                    <td className="py-3 px-4 font-mono font-semibold">
-                      {p.batchNumber ? (
-                        <div className="flex flex-wrap gap-1">
-                          {p.batchNumber.split(',').map((b, idx) => (
-                            <Badge key={idx} variant="outline" className="border-neutral-300 text-black font-mono text-xs">
-                              {b.trim()}
+                {allProducts.map(p => {
+                  const isExpanded = expandedProductIds.has(p.id)
+                  const activeBatches = p.batchesList
+                    ? p.batchesList.filter(b => b.production.total > 0)
+                    : []
+                  const hasBatches = activeBatches.length > 0
+
+                  return (
+                    <Fragment key={p.id}>
+                      {/* Main Summary Row */}
+                      <tr
+                        onClick={() => toggleProductExpand(p.id)}
+                        className="hover:bg-neutral-50 transition-colors cursor-pointer select-none"
+                      >
+                        <td className="py-3 px-3 text-center text-neutral-500">
+                          {isExpanded ? (
+                            <ChevronDown className="h-4 w-4 mx-auto text-black font-bold" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4 mx-auto text-neutral-400" />
+                          )}
+                        </td>
+                        <td className="py-3 px-4 font-mono font-bold text-black">
+                          {p.skuCode ? (
+                            <Badge variant="outline" className="border-neutral-300 text-black font-mono">
+                              {p.skuCode}
                             </Badge>
-                          ))}
-                        </div>
-                      ) : (
-                        "Not entered"
+                          ) : (
+                            "—"
+                          )}
+                        </td>
+                        <td className="py-3 px-4 font-bold text-black">
+                          <div className="flex items-center gap-2">
+                            <span>{p.name}</span>
+                            {hasBatches && (
+                              <span className="text-[10px] text-neutral-500 font-semibold bg-neutral-100 px-1.5 py-0.5 rounded border border-neutral-200">
+                                {p.batchesList!.length} batch{p.batchesList!.length > 1 ? "es" : ""}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 text-neutral-600 font-semibold">{p.category}</td>
+                        <td className="py-3 px-4 text-right font-black text-base text-black">
+                          {p.production.total > 0 ? (
+                            <span>{p.production.total.toLocaleString()} {p.unit}</span>
+                          ) : (
+                            <span className="text-neutral-400 font-normal">0 {p.unit}</span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4 text-center" onClick={e => e.stopPropagation()}>
+                          <AddProductionModal product={p} date={period.date} onSaved={fetchData} />
+                        </td>
+                      </tr>
+
+                      {/* Collapsible Batch Breakdown Dropdown Panel */}
+                      {isExpanded && (
+                        <tr className="bg-neutral-50/80">
+                          <td colSpan={6} className="p-0 border-b border-neutral-200">
+                            <div className="p-3 pl-12">
+                              <div className="border border-neutral-200 rounded-lg overflow-hidden bg-white shadow-2xs">
+                                <table className="w-full text-left text-xs">
+                                  <thead className="bg-neutral-100 text-black font-bold uppercase tracking-wider border-b border-neutral-200">
+                                    <tr>
+                                      <th className="py-2.5 px-3">Batch No</th>
+                                      <th className="py-2.5 px-3">Mfg Date</th>
+                                      <th className="py-2.5 px-3">Expiry Date</th>
+                                      <th className="py-2.5 px-3 text-right font-black text-black">Production Quantity</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-neutral-200">
+                                    {hasBatches ? (
+                                      activeBatches.map((b, idx) => (
+                                        <tr key={idx} className="hover:bg-neutral-50">
+                                          <td className="py-2 px-3 font-mono font-bold text-black">
+                                            <Badge variant="outline" className="border-neutral-300 text-black font-mono text-[11px]">
+                                              {b.batchNumber}
+                                            </Badge>
+                                          </td>
+                                          <td className="py-2 px-3 text-neutral-600 font-medium">{b.manufacturingDate || "—"}</td>
+                                          <td className="py-2 px-3 text-neutral-600 font-medium">{b.expiryDate || "—"}</td>
+                                          <td className="py-2 px-3 text-right font-black text-sm text-black">
+                                            +{b.production.total.toLocaleString()} {p.unit}
+                                          </td>
+                                        </tr>
+                                      ))
+                                    ) : (
+                                      <tr>
+                                        <td colSpan={4} className="py-3 px-4 text-center text-neutral-500 font-medium">
+                                          No production entry recorded for date {period.date}.
+                                        </td>
+                                      </tr>
+                                    )}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
                       )}
-                    </td>
-                    <td className="py-3 px-4 text-neutral-600 font-medium">{p.manufacturingDate || "—"}</td>
-                    <td className="py-3 px-4 text-right font-semibold">{p.production.crt}</td>
-                    <td className="py-3 px-4 text-right font-semibold">{p.production.pc}</td>
-                    <td className="py-3 px-4 text-right font-black text-base">
-                      {p.production.total.toLocaleString()} {p.unit}
-                    </td>
-                    <td className="py-3 px-4 text-center">
-                      <AddProductionModal product={p} date={period.date} onSaved={fetchData} />
-                    </td>
-                  </tr>
-                ))}
+                    </Fragment>
+                  )
+                })}
               </tbody>
             </table>
           </div>
