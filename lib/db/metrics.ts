@@ -146,6 +146,102 @@ export async function upsertEntry(input: EntryInput) {
   return { batchId }
 }
 
+export async function recordSaleEntry(input: {
+  productId: string
+  date: string
+  batchNumber: string
+  saleCrt: number
+  salePc: number
+  saleTotal: number
+  notes?: string
+}) {
+  const { productId, date, batchNumber, saleCrt, salePc, saleTotal, notes } = input
+
+  // 1. Find existing batch master to inherit metadata (ubd, mfd, shelf life)
+  const masterBatch = await turso.execute({
+    sql: `SELECT manufacturing_date, ubd, expiry_date, shelf_life_days
+          FROM batches
+          WHERE product_id = ? AND batch_number = ?
+          LIMIT 1`,
+    args: [productId, batchNumber],
+  })
+
+  const mfd = masterBatch.rows[0]?.manufacturing_date ? String(masterBatch.rows[0].manufacturing_date) : null
+  const ubd = masterBatch.rows[0]?.ubd ? String(masterBatch.rows[0].ubd) : null
+  const exp = masterBatch.rows[0]?.expiry_date ? String(masterBatch.rows[0].expiry_date) : null
+  const shelfLife = masterBatch.rows[0]?.shelf_life_days !== undefined && masterBatch.rows[0]?.shelf_life_days !== null
+    ? Number(masterBatch.rows[0].shelf_life_days)
+    : null
+
+  // 2. Find or create batch row on this specific sale date
+  let batchId: string
+  const existingBatch = await turso.execute({
+    sql: `SELECT id FROM batches WHERE product_id = ? AND date = ? AND batch_number = ?`,
+    args: [productId, date, batchNumber],
+  })
+
+  if (existingBatch.rows.length > 0) {
+    batchId = String(existingBatch.rows[0].id)
+    // Update metadata if available
+    if (mfd || ubd || exp || shelfLife) {
+      await turso.execute({
+        sql: `UPDATE batches SET
+                manufacturing_date = COALESCE(?, manufacturing_date),
+                ubd = COALESCE(?, ubd),
+                expiry_date = COALESCE(?, expiry_date),
+                shelf_life_days = COALESCE(?, shelf_life_days)
+              WHERE id = ?`,
+        args: [mfd, ubd, exp, shelfLife, batchId],
+      })
+    }
+  } else {
+    batchId = crypto.randomUUID()
+    await turso.execute({
+      sql: `INSERT INTO batches (id, product_id, date, batch_number, manufacturing_date, ubd, expiry_date, shelf_life_days)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      args: [batchId, productId, date, batchNumber, mfd, ubd, exp, shelfLife],
+    })
+  }
+
+  // 3. Update or insert daily_metrics preserving existing production/opening
+  const existingMetrics = await turso.execute({
+    sql: `SELECT id, sale_crt, sale_pc, sale_total FROM daily_metrics WHERE batch_id = ?`,
+    args: [batchId],
+  })
+
+  if (existingMetrics.rows.length > 0) {
+    // Add to existing sale or update
+    await turso.execute({
+      sql: `UPDATE daily_metrics SET
+              sale_crt = ?, sale_pc = ?, sale_total = ?,
+              notes = COALESCE(?, notes),
+              updated_at = datetime('now')
+            WHERE batch_id = ?`,
+      args: [saleCrt, salePc, saleTotal, notes ?? null, batchId],
+    })
+  } else {
+    const opening = await getPreviousClosing(productId, date)
+    await turso.execute({
+      sql: `INSERT INTO daily_metrics
+              (id, batch_id, opening_crt, opening_pc, opening_total,
+               production_crt, production_pc, production_total,
+               demand_crt, demand_pc, demand_total,
+               sale_crt, sale_pc, sale_total,
+               sales_return_crt, sales_return_pc, sales_return_total,
+               sales_target, notes)
+            VALUES (?, ?, ?, ?, ?, 0, 0, 0, 0, 0, 0, ?, ?, ?, 0, 0, 0, 0, ?)`,
+      args: [
+        crypto.randomUUID(), batchId,
+        opening.crt, opening.pc, opening.total,
+        saleCrt, salePc, saleTotal,
+        notes ?? null,
+      ],
+    })
+  }
+
+  return { batchId, productId, batchNumber, date, saleTotal }
+}
+
 export async function getMetricsForDate(date: string) {
   const result = await turso.execute({
     sql: `SELECT p.id as product_id, p.name, p.sku_code, p.category, p.unit, COALESCE(p.pcs_per_crt, 1) as pcs_per_crt, COALESCE(p.shelf_life_days, 0) as product_shelf_life,

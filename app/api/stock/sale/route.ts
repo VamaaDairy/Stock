@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { upsertEntry } from "@/lib/db/metrics"
+import { recordSaleEntry } from "@/lib/db/metrics"
 import { turso } from "@/lib/turso"
 
 interface SaleItemInput {
@@ -13,17 +13,6 @@ interface SaleItemInput {
   notes?: string
 }
 
-/**
- * POST /api/stock/sale (also /api/stock/remove)
- * Records Sale entries in the system.
- *
- * Accepts either a single object or an array of objects.
- * Accepts productId OR productName (auto-resolves ID by matching product name).
- *
- * Recording a sale:
- * 1. Shows up in the Sales page as a Sale entry with its batch number.
- * 2. Current Stock automatically reduces via formula: (Opening + Production + Return - Sale).
- */
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
@@ -33,25 +22,50 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: "Empty request body" }, { status: 400 })
     }
 
-    // Cache products for name -> id lookup
+    // Cache products for matching
     const prodResult = await turso.execute("SELECT id, name, sku_code FROM products")
-    const nameToId = new Map<string, string>()
+    const idSet = new Set<string>()
+    const normMap = new Map<string, string>()
+
     for (const row of prodResult.rows) {
       const id = String(row.id)
-      const name = String(row.name).toLowerCase().replace(/[^a-z0-9]/g, "")
-      nameToId.set(name, id)
+      idSet.add(id)
+
+      const normName = String(row.name).toLowerCase().replace(/[^a-z0-9]/g, "")
+      normMap.set(normName, id)
+
+      if (row.sku_code) {
+        normMap.set(String(row.sku_code).toLowerCase().replace(/[^a-z0-9]/g, ""), id)
+      }
     }
 
     const results = []
     for (const item of items) {
       let pid = item.productId
 
+      // If productId was provided and valid
+      if (pid && !idSet.has(pid)) {
+        pid = undefined
+      }
+
+      // If no valid productId, resolve from productName
       if (!pid && item.productName) {
-        const norm = item.productName.toLowerCase().replace(/[^a-z0-9]/g, "")
-        pid = nameToId.get(norm)
+        const rawNorm = item.productName.toLowerCase().replace(/[^a-z0-9]/g, "")
+        pid = normMap.get(rawNorm)
+
+        // Partial match fallback
+        if (!pid) {
+          for (const [normKey, resolvedId] of normMap.entries()) {
+            if (rawNorm.includes(normKey) || normKey.includes(rawNorm)) {
+              pid = resolvedId
+              break
+            }
+          }
+        }
       }
 
       if (!pid || !item.date || !item.batchNumber) {
+        console.warn("Skipping sale item due to missing fields:", { item, resolvedPid: pid })
         continue
       }
 
@@ -63,14 +77,13 @@ export async function POST(req: NextRequest) {
         continue
       }
 
-      const res = await upsertEntry({
+      const res = await recordSaleEntry({
         productId: pid,
         date: item.date,
         batchNumber: item.batchNumber,
-        production: { crt: 0, pc: 0, total: 0 },
-        demand: { crt: 0, pc: 0, total: 0 },
-        sale: { crt, pc, total },
-        salesReturn: { crt: 0, pc: 0, total: 0 },
+        saleCrt: crt,
+        salePc: pc,
+        saleTotal: total > 0 ? total : crt,
         notes: item.notes,
       })
       results.push(res)
@@ -78,7 +91,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, recordedCount: results.length, data: results })
   } catch (err) {
-    console.error(err)
+    console.error("Sale API error:", err)
     return NextResponse.json({ success: false, error: String(err) }, { status: 500 })
   }
 }
