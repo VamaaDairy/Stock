@@ -34,7 +34,7 @@ export default function AddSalesReturnModal({
 
   const defaultBatch = product.batchNumber && product.batchNumber !== "B1"
     ? product.batchNumber
-    : generateDairyBatchCode(date, product.skuCode, (product as any).category, product.name)
+    : generateDairyBatchCode(date, product.id)
 
   const [batchNumber, setBatchNumber] = useState(defaultBatch)
   const [returnPc, setReturnPc] = useState(

@@ -47,7 +47,7 @@ export default function AddProductionModal({
   const initialExpiry = product.expiryDate ?? computeExpiryDate(initialMfg, initialShelfLife)
   const defaultBatch = product.batchNumber && product.batchNumber !== "B1"
     ? product.batchNumber
-    : generateDairyBatchCode(initialMfg, product.skuCode, (product as any).category, product.name)
+    : generateDairyBatchCode(initialMfg, product.id)
 
   const [batchNumber, setBatchNumber] = useState(defaultBatch)
   const [mfgDate, setMfgDate] = useState(initialMfg)
@@ -74,7 +74,7 @@ export default function AddProductionModal({
       setUbd(calcExp)
     }
     if (!product.batchNumber || product.batchNumber === "B1") {
-      setBatchNumber(generateDairyBatchCode(newMfg, product.skuCode, (product as any).category, product.name))
+      setBatchNumber(generateDairyBatchCode(newMfg, product.id))
     }
   }
 

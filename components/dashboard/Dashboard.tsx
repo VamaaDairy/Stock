@@ -11,6 +11,26 @@ function todayStr() {
   return new Date().toISOString().slice(0, 10)
 }
 
+// UBD % = (days remaining until UBD / shelf life days) * 100
+function calcUBDPercent(ubd: string | null, shelfLifeDays: number | null): number | null {
+  if (!ubd || !shelfLifeDays || shelfLifeDays <= 0) return null
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const ubdDate = new Date(ubd)
+  ubdDate.setHours(0, 0, 0, 0)
+  const daysLeft = Math.round((ubdDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+  return Math.round((daysLeft / shelfLifeDays) * 1000) / 10 // 1 decimal
+}
+
+function ubdPercentColor(pct: number | null): string {
+  if (pct === null) return "text-neutral-400"
+  if (pct <= 0) return "text-red-600 font-black"
+  if (pct < 50) return "text-red-500 font-bold"
+  if (pct < 70) return "text-orange-500 font-bold"
+  if (pct < 85) return "text-yellow-600 font-bold"
+  return "text-green-600 font-bold"
+}
+
 export default function Dashboard() {
   const [period, setPeriod] = useState<PeriodSelection>({
     mode: "single",
@@ -235,13 +255,17 @@ export default function Dashboard() {
                                     <tr>
                                       <th className="py-2.5 px-3">Batch No</th>
                                       <th className="py-2.5 px-3">Mfg Date</th>
-                                      <th className="py-2.5 px-3">Expiry Date</th>
+                                      <th className="py-2.5 px-3">UBD</th>
+                                      <th className="py-2.5 px-3 text-center">UBD %</th>
                                       <th className="py-2.5 px-3 text-right font-black text-black">Available Stock</th>
                                     </tr>
                                   </thead>
                                   <tbody className="divide-y divide-neutral-200">
                                     {hasBatches ? (
-                                      activeBatches.map((b, idx) => (
+                                      activeBatches.map((b, idx) => {
+                                        const ubdVal = b.ubd || b.expiryDate || null
+                                        const pct = calcUBDPercent(ubdVal, b.shelfLifeDays)
+                                        return (
                                         <tr key={idx} className="hover:bg-neutral-50">
                                           <td className="py-2 px-3 font-mono font-bold text-black">
                                             <Badge variant="outline" className="border-neutral-300 text-black font-mono text-[11px]">
@@ -249,15 +273,25 @@ export default function Dashboard() {
                                             </Badge>
                                           </td>
                                           <td className="py-2 px-3 text-neutral-600 font-medium">{b.manufacturingDate || "—"}</td>
-                                          <td className="py-2 px-3 text-neutral-600 font-medium">{b.expiryDate || "—"}</td>
+                                          <td className="py-2 px-3 text-neutral-600 font-medium">{ubdVal || "—"}</td>
+                                          <td className="py-2 px-3 text-center">
+                                            {pct === null ? (
+                                              <span className="text-neutral-400 text-xs">—</span>
+                                            ) : pct <= 0 ? (
+                                              <span className="text-red-600 font-black text-xs bg-red-50 px-1.5 py-0.5 rounded">EXPIRED</span>
+                                            ) : (
+                                              <span className={`text-xs ${ubdPercentColor(pct)}`}>{pct.toFixed(1)}%</span>
+                                            )}
+                                          </td>
                                           <td className="py-2 px-3 text-right font-black text-sm text-black">
                                             {b.closing.total.toLocaleString()} {p.unit}
                                           </td>
                                         </tr>
-                                      ))
+                                        )
+                                      })
                                     ) : (
                                       <tr>
-                                        <td colSpan={4} className="py-3 px-4 text-center text-neutral-500 font-medium">
+                                        <td colSpan={5} className="py-3 px-4 text-center text-neutral-500 font-medium">
                                           No individual batch entry recorded for this product.
                                         </td>
                                       </tr>

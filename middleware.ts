@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { verifySession } from "@/lib/auth"
 
-const PROTECTED = ["/dashboard", "/production", "/demand", "/sales", "/products", "/settings", "/profile"]
-const PUBLIC = ["/login", "/signup"]
+const PROTECTED = ["/profile"]
+const PUBLIC = ["/login", "/signup","/dashboard", "/production", "/demand", "/sales", "/products", "/settings","/"]
 
 export async function middleware(req: NextRequest) {
   const path = req.nextUrl.pathname
@@ -29,5 +29,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/", "/dashboard/:path*", "/production/:path*", "/demand/:path*", "/sales/:path*", "/products/:path*", "/settings/:path*", "/profile/:path*", "/login", "/signup"],
+  matcher: ["/dashboard/:path*", "/production/:path*", "/demand/:path*", "/sales/:path*", "/products/:path*", "/settings/:path*", "/profile/:path*", "/login", "/signup"],
 }
