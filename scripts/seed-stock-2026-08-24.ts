@@ -104,7 +104,7 @@ async function main() {
     const ubd = row.ubd ?? (row.mfdOverride ? subtractDays(row.mfdOverride, -shelfLife) : TODAY)
     const mfd = row.mfdOverride ?? subtractDays(row.ubd as string, shelfLife)
 
-    let batchNumber = generateDairyBatchCode(mfd, product.skuCode, product.category, product.name)
+    let batchNumber = generateDairyBatchCode(mfd, product.id)
     if (row.batchSuffix) batchNumber += `-${row.batchSuffix}`
 
     const total = row.crt * (product.pcsPerCrt || 1) + row.pc

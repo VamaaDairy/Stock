@@ -43,7 +43,7 @@ async function main() {
     const shelfLife = product.shelfLifeDays || 0
     const mfd = row.mfdOverride ?? subtractDays(row.ubd as string, shelfLife)
     const ubd = row.ubd ?? subtractDays(mfd, -shelfLife)
-    let batchNumber = generateDairyBatchCode(mfd, product.skuCode, product.category, product.name)
+    let batchNumber = generateDairyBatchCode(mfd, product.id)
     if (row.batchSuffix) batchNumber += `-${row.batchSuffix}`
 
     const key = `${row.productId}|${batchNumber}`
