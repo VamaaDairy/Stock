@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Search, ShoppingCart } from "lucide-react"
 import AddDemandModal from "@/components/demand/AddDemandModal"
 import DatePeriodSelector, { PeriodSelection } from "@/components/ui/date-period-selector"
+import { formatMixedUnit } from "@/lib/utils"
 import type { CategoryGroup, Product } from "@/components/dashboard/types"
 
 function todayStr() {
@@ -23,26 +24,35 @@ export default function DemandPage() {
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
 
-  const fetchData = useCallback(async () => {
-    setLoading(true)
-    try {
-      const url =
-        period.mode === "range"
-          ? `/api/dashboard?fromDate=${period.fromDate}&toDate=${period.toDate}`
-          : `/api/dashboard?date=${period.date}`
-      const res = await fetch(url)
-      const json = await res.json()
-      if (json.success) setData(json.data)
-    } catch (e) {
-      console.error(e)
-    } finally {
-      setLoading(false)
-    }
-  }, [period])
+  const [refreshTrigger, setRefreshTrigger] = useState(0)
+  const fetchData = useCallback(() => setRefreshTrigger(prev => prev + 1), [])
 
   useEffect(() => {
-    fetchData()
-  }, [fetchData])
+    let ignore = false
+    async function loadData() {
+      try {
+        const url =
+          period.mode === "range"
+            ? `/api/dashboard?fromDate=${period.fromDate}&toDate=${period.toDate}`
+            : `/api/dashboard?date=${period.date}`
+        const res = await fetch(url)
+        const json = await res.json()
+        if (!ignore && json.success) {
+          setData(json.data)
+        }
+      } catch (e) {
+        console.error(e)
+      } finally {
+        if (!ignore) {
+          setLoading(false)
+        }
+      }
+    }
+    loadData()
+    return () => {
+      ignore = true
+    }
+  }, [period, refreshTrigger])
 
   const allProducts = useMemo(() => {
     let list: (Product & { category: string })[] = []
@@ -131,13 +141,27 @@ export default function DemandPage() {
                     <td className="py-3 px-4 text-neutral-600 font-semibold">{p.category}</td>
                     <td className="py-3 px-4 text-right font-black text-base text-black">
                       {p.demand.total > 0 ? (
-                        <span>{p.demand.total.toLocaleString()} {p.unit}</span>
+                        <div>
+                          <span className="font-extrabold">{formatMixedUnit(p.demand.total, p.pcsPerCrt, p.unit || "CRT", "PCS")}</span>
+                          {p.pcsPerCrt > 1 && (
+                            <div className="text-[11px] font-semibold text-neutral-500">
+                              ({p.demand.total.toLocaleString()} PCS)
+                            </div>
+                          )}
+                        </div>
                       ) : (
                         <span className="text-neutral-400 font-normal">0 {p.unit}</span>
                       )}
                     </td>
                     <td className="py-3 px-4 text-right font-black text-base text-black">
-                      {p.currentStock.toLocaleString()} {p.unit}
+                      <div>
+                        <span className="font-extrabold">{formatMixedUnit(p.currentStockTotal ?? p.currentStock, p.pcsPerCrt, p.unit || "CRT", "PCS")}</span>
+                        {p.pcsPerCrt > 1 && (
+                          <div className="text-[11px] font-semibold text-neutral-500">
+                            ({(p.currentStockTotal ?? p.currentStock ?? 0).toLocaleString()} PCS)
+                          </div>
+                        )}
+                      </div>
                     </td>
                     <td className="py-3 px-4 text-center">
                       <AddDemandModal product={p} date={period.date} onSaved={fetchData} />

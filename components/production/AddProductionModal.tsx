@@ -14,18 +14,9 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { generateDairyBatchCode } from "@/lib/utils/batch"
+import { generateDairyBatchCode, computeExpiryDate } from "@/lib/utils/batch"
+import { formatMixedUnit, pcsToMixed } from "@/lib/utils"
 import type { Product } from "@/components/dashboard/types"
-
-function computeExpiryDate(mfgDateStr: string, shelfLifeStr: string): string {
-  if (!mfgDateStr) return ""
-  const days = parseInt(shelfLifeStr, 10)
-  if (isNaN(days) || days <= 0) return ""
-  const d = new Date(mfgDateStr)
-  if (isNaN(d.getTime())) return ""
-  d.setDate(d.getDate() + days)
-  return d.toISOString().slice(0, 10)
-}
 
 export default function AddProductionModal({
   product,
@@ -56,14 +47,14 @@ export default function AddProductionModal({
   const [ubd, setUbd] = useState(product.ubd ?? initialExpiry)
 
   const [prodPc, setProdPc] = useState(
-    product.production.pc > 0
-      ? String(product.production.pc)
-      : product.production.crt > 0 && pcsPerCrt > 1
-      ? String(product.production.crt * pcsPerCrt)
-      : String(product.production.total || "")
+    (product.production?.pc ?? 0) > 0
+      ? String(product.production?.pc)
+      : (product.production?.crt ?? 0) > 0 && pcsPerCrt > 1
+      ? String((product.production?.crt ?? 0) * pcsPerCrt)
+      : String(product.production?.total || "")
   )
-  const [prodCrt, setProdCrt] = useState(String(product.production.crt || ""))
-  const [prodTotal, setProdTotal] = useState(String(product.production.total || ""))
+  const [prodCrt, setProdCrt] = useState(String(product.production?.crt || ""))
+  const [prodTotal, setProdTotal] = useState(String(product.production?.total || ""))
 
   // Auto-recalculate Expiry & Batch Code whenever mfgDate or shelfLifeDays change
   const handleMfgDateChange = (newMfg: string) => {
@@ -100,7 +91,7 @@ export default function AddProductionModal({
     }
   }
 
-  // Smallest unit (Pcs) input handler with auto-conversion to Crt
+  // Smallest unit (Pcs) input handler with auto-conversion to Crt & mixed breakdown
   const handlePcsChange = (pcsVal: string) => {
     setProdPc(pcsVal)
     const pcs = parseFloat(pcsVal) || 0
@@ -110,13 +101,10 @@ export default function AddProductionModal({
       return
     }
 
-    if (product.unit === "PCS" || product.unit === "KG") {
-      setProdCrt(String(pcs))
-      setProdTotal(String(pcs))
-    } else if (pcsPerCrt > 1) {
-      const crtVal = Number((pcs / pcsPerCrt).toFixed(4))
-      setProdCrt(String(crtVal))
-      setProdTotal(String(crtVal))
+    if (pcsPerCrt > 1) {
+      const mixed = pcsToMixed(pcs, pcsPerCrt, product.unit || "CRT")
+      setProdCrt(String(mixed.crt))
+      setProdTotal(String(mixed.total))
     } else {
       setProdCrt(String(pcs))
       setProdTotal(String(pcs))
@@ -127,13 +115,10 @@ export default function AddProductionModal({
   const handleCrtChange = (crtVal: string) => {
     setProdCrt(crtVal)
     const crt = parseFloat(crtVal) || 0
-    if (product.unit === "PCS" || product.unit === "KG") {
-      setProdPc(String(crt))
-      setProdTotal(String(crt))
-    } else if (pcsPerCrt > 1) {
+    if (pcsPerCrt > 1) {
       const pcsVal = Math.round(crt * pcsPerCrt)
       setProdPc(String(pcsVal))
-      setProdTotal(String(crt))
+      setProdTotal(String(pcsVal))
     } else {
       setProdPc(String(crt))
       setProdTotal(String(crt))
@@ -252,36 +237,27 @@ export default function AddProductionModal({
             </Label>
             
             <div className="space-y-1.5">
-              <Label className="text-[11px] font-bold text-neutral-600">Smallest Unit (Pcs)</Label>
+              <Label className="text-[11px] font-bold text-neutral-600">Total Quantity in Pieces (Pcs)</Label>
               <Input
                 type="number"
                 className="h-11 text-lg font-bold border border-neutral-300 text-black bg-white"
-                placeholder="Enter Pcs (e.g. 120)"
+                placeholder="Enter Pcs (e.g. 50)"
                 value={prodPc}
                 onChange={e => handlePcsChange(e.target.value)}
               />
             </div>
 
-            {/* Calculated Conversion Result */}
+            {/* Live Mixed Unit Result Card */}
             {pcsPerCrt > 1 && (
-              <div className="grid grid-cols-2 gap-2 pt-1 border-t border-neutral-200">
-                <div>
-                  <Label className="text-[11px] font-bold text-neutral-600">Calculated {product.unit} (Crt/Box)</Label>
-                  <Input
-                    type="number"
-                    className="h-9 text-sm font-bold border-neutral-300 text-black bg-white"
-                    value={prodCrt}
-                    onChange={e => handleCrtChange(e.target.value)}
-                  />
+              <div className="bg-white p-3 rounded-lg border border-neutral-300 mt-2 space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-neutral-600">Mixed Unit Breakdown:</span>
+                  <span className="text-sm font-extrabold text-black font-mono bg-neutral-100 px-2 py-0.5 rounded border border-neutral-200">
+                    {formatMixedUnit(parseFloat(prodPc) || 0, pcsPerCrt, product.unit || "CRT", "PCS")}
+                  </span>
                 </div>
-                <div>
-                  <Label className="text-[11px] font-bold text-neutral-600">Total Primary Qty ({product.unit})</Label>
-                  <Input
-                    type="number"
-                    className="h-9 text-sm font-black border-neutral-300 text-black bg-neutral-100"
-                    value={prodTotal}
-                    readOnly
-                  />
+                <div className="text-[11px] text-neutral-500 font-medium">
+                  {pcsPerCrt} pcs per crate · Crt: {prodCrt} · Loose Pcs: {(parseFloat(prodPc) || 0) % pcsPerCrt}
                 </div>
               </div>
             )}

@@ -4,68 +4,41 @@ import React, { useEffect, useState, useCallback, useMemo, Fragment } from "reac
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Search, Package, Filter, ChevronRight, ChevronDown } from "lucide-react"
-import DatePeriodSelector, { PeriodSelection } from "@/components/ui/date-period-selector"
+import { formatMixedUnit, calcUBDPercent, ubdPercentColor } from "@/lib/utils"
 import type { CategoryGroup, Product } from "./types"
 
-function todayStr() {
-  return new Date().toISOString().slice(0, 10)
-}
-
-// UBD % = (days remaining until UBD / shelf life days) * 100
-function calcUBDPercent(ubd: string | null, shelfLifeDays: number | null): number | null {
-  if (!ubd || !shelfLifeDays || shelfLifeDays <= 0) return null
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const ubdDate = new Date(ubd)
-  ubdDate.setHours(0, 0, 0, 0)
-  const daysLeft = Math.round((ubdDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
-  return Math.round((daysLeft / shelfLifeDays) * 1000) / 10 // 1 decimal
-}
-
-function ubdPercentColor(pct: number | null): string {
-  if (pct === null) return "text-neutral-400"
-  if (pct <= 0) return "text-red-600 font-black"
-  if (pct < 50) return "text-red-500 font-bold"
-  if (pct < 70) return "text-orange-500 font-bold"
-  if (pct < 85) return "text-yellow-600 font-bold"
-  return "text-green-600 font-bold"
-}
-
 export default function Dashboard() {
-  const [period, setPeriod] = useState<PeriodSelection>({
-    mode: "single",
-    date: todayStr(),
-    fromDate: todayStr(),
-    toDate: todayStr(),
-  })
   const [data, setData] = useState<CategoryGroup[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedBatch, setSelectedBatch] = useState<string>("all")
   const [expandedProductIds, setExpandedProductIds] = useState<Set<string>>(new Set())
 
-  const fetchData = useCallback(async () => {
-    setLoading(true)
-    try {
-      const url =
-        period.mode === "range"
-          ? `/api/dashboard?fromDate=${period.fromDate}&toDate=${period.toDate}`
-          : `/api/dashboard?date=${period.date}`
-      const res = await fetch(url)
-      const json = await res.json()
-      if (json.success) setData(json.data)
-    } catch (e) {
-      console.error(e)
-    } finally {
-      setLoading(false)
-    }
-  }, [period])
+  const [refreshTrigger, setRefreshTrigger] = useState(0)
+  const refreshData = useCallback(() => setRefreshTrigger(prev => prev + 1), [])
 
   useEffect(() => {
-    queueMicrotask(() => {
-      fetchData()
-    })
-  }, [fetchData])
+    let ignore = false
+    async function loadData() {
+      try {
+        const res = await fetch("/api/stock/current")
+        const json = await res.json()
+        if (!ignore && json.success) {
+          setData(json.data)
+        }
+      } catch (e) {
+        console.error(e)
+      } finally {
+        if (!ignore) {
+          setLoading(false)
+        }
+      }
+    }
+    loadData()
+    return () => {
+      ignore = true
+    }
+  }, [refreshTrigger])
 
   const toggleProductExpand = (id: string) => {
     setExpandedProductIds(prev => {
@@ -81,11 +54,18 @@ export default function Dashboard() {
     const batches = new Set<string>()
     data.forEach(group => {
       group.products.forEach(p => {
-        if (p.batchNumber) {
-          p.batchNumber.split(',').forEach(b => {
-            const trimmed = b.trim()
-            if (trimmed) batches.add(trimmed)
+        if (p.batchesList && p.batchesList.length > 0) {
+          p.batchesList.forEach(b => {
+            if (b.batchNumber?.trim()) batches.add(b.batchNumber.trim())
           })
+        } else {
+          const batchStr = p.batchNumbers || p.batchNumber || ""
+          if (batchStr) {
+            batchStr.split(',').forEach(b => {
+              const trimmed = b.trim()
+              if (trimmed) batches.add(trimmed)
+            })
+          }
         }
       })
     })
@@ -102,29 +82,35 @@ export default function Dashboard() {
     })
 
     if (selectedBatch !== "all") {
-      list = list.filter(p => p.batchNumber && p.batchNumber.split(',').map(b => b.trim()).includes(selectedBatch))
+      list = list.filter(p => {
+        if (p.batchesList && p.batchesList.length > 0) {
+          return p.batchesList.some(b => b.batchNumber === selectedBatch)
+        }
+        const batchStr = p.batchNumbers || p.batchNumber || ""
+        return batchStr.split(',').map(b => b.trim()).includes(selectedBatch)
+      })
     }
 
     if (!searchQuery.trim()) return list
     const q = searchQuery.toLowerCase().trim()
     return list.filter(
-      p =>
-        p.name.toLowerCase().includes(q) ||
-        p.skuCode.toLowerCase().includes(q) ||
-        p.category.toLowerCase().includes(q) ||
-        (p.batchNumber && p.batchNumber.toLowerCase().includes(q))
+      p => {
+        const batchStr = p.batchNumbers || p.batchNumber || (p.batchesList ? p.batchesList.map(b => b.batchNumber).join(' ') : "")
+        return (
+          p.name.toLowerCase().includes(q) ||
+          p.skuCode.toLowerCase().includes(q) ||
+          p.category.toLowerCase().includes(q) ||
+          batchStr.toLowerCase().includes(q)
+        )
+      }
     )
   }, [data, searchQuery, selectedBatch])
-
-
-
-  const currentDateLabel = period.mode === "range" ? `${period.fromDate} to ${period.toDate}` : period.date
 
   return (
     <div className="min-h-screen bg-white text-black px-4 py-6 pb-20">
       <div className="max-w-6xl mx-auto space-y-6">
         
-        {/* Top Header & Period Selector */}
+        {/* Top Header */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-neutral-200 shadow-xs">
           <div>
             <h1 className="text-3xl font-black tracking-tight text-black flex items-center gap-2">
@@ -132,13 +118,12 @@ export default function Dashboard() {
               Current Stock Inventory
             </h1>
             <p className="text-xs text-neutral-600 mt-1">
-              Live Stock Balance = Opening + Production − Sale Dispatches (<span className="font-bold text-black">{currentDateLabel}</span>)
+              All-time live balance — every unsold batch shown regardless of production date.
             </p>
           </div>
-          <div className="self-start lg:self-auto">
-            <DatePeriodSelector value={period} onChange={setPeriod} />
-          </div>
         </div>
+
+
 
 
 
@@ -233,10 +218,17 @@ export default function Dashboard() {
                         </td>
                         <td className="py-3 px-4 text-neutral-600 font-semibold">{p.category}</td>
                         <td className="py-3 px-4 text-right font-black text-base text-black">
-                          {p.currentStock.toLocaleString()} {p.unit}
+                          <div className="font-extrabold text-black">
+                            {formatMixedUnit(p.currentStockTotal ?? p.currentStock, p.pcsPerCrt, p.unit || "CRT", "PCS")}
+                          </div>
+                          {p.pcsPerCrt > 1 && (
+                            <div className="text-[11px] font-semibold text-neutral-500">
+                              ({(p.currentStockTotal ?? p.currentStock ?? 0).toLocaleString()} PCS)
+                            </div>
+                          )}
                         </td>
                         <td className="py-3 px-4 text-center">
-                          {p.currentStock > 0 ? (
+                          {(p.currentStockTotal ?? p.currentStock ?? 0) > 0 ? (
                             <Badge variant="outline" className="border-neutral-300 text-black font-bold text-[10px]">IN STOCK</Badge>
                           ) : (
                             <Badge variant="outline" className="border-neutral-300 text-neutral-400 font-bold text-[10px]">ZERO STOCK</Badge>
@@ -254,7 +246,7 @@ export default function Dashboard() {
                                   <thead className="bg-neutral-100 text-black font-bold uppercase tracking-wider border-b border-neutral-200">
                                     <tr>
                                       <th className="py-2.5 px-3">Batch No</th>
-                                      <th className="py-2.5 px-3">Mfg Date</th>
+                                      <th className="py-2.5 px-3">MFD</th>
                                       <th className="py-2.5 px-3">UBD</th>
                                       <th className="py-2.5 px-3 text-center">UBD %</th>
                                       <th className="py-2.5 px-3 text-right font-black text-black">Available Stock</th>
@@ -264,7 +256,7 @@ export default function Dashboard() {
                                     {hasBatches ? (
                                       activeBatches.map((b, idx) => {
                                         const ubdVal = b.ubd || b.expiryDate || null
-                                        const pct = calcUBDPercent(ubdVal, b.shelfLifeDays)
+                                        const pct = calcUBDPercent(ubdVal, b.shelfLifeDays || p.shelfLifeDays, b.manufacturingDate)
                                         return (
                                         <tr key={idx} className="hover:bg-neutral-50">
                                           <td className="py-2 px-3 font-mono font-bold text-black">
@@ -284,7 +276,14 @@ export default function Dashboard() {
                                             )}
                                           </td>
                                           <td className="py-2 px-3 text-right font-black text-sm text-black">
-                                            {b.closing.total.toLocaleString()} {p.unit}
+                                            <div className="font-extrabold">
+                                              {formatMixedUnit(b.closing.total, p.pcsPerCrt, p.unit || "CRT", "PCS")}
+                                            </div>
+                                            {p.pcsPerCrt > 1 && (
+                                              <div className="text-[10px] font-semibold text-neutral-400">
+                                                ({b.closing.total.toLocaleString()} PCS)
+                                              </div>
+                                            )}
                                           </td>
                                         </tr>
                                         )

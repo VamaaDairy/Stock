@@ -1,6 +1,7 @@
 "use client"
 
 import { Badge } from "@/components/ui/badge"
+import { formatMixedUnit, calcUBDPercent, ubdPercentColor } from "@/lib/utils"
 import type { Product } from "./types"
 
 export default function ProductRow({
@@ -12,27 +13,37 @@ export default function ProductRow({
   date: string
   onSaved: () => void
 }) {
-  const { opening, production, demand, sale, closing, hasEntry, unit, batchNumber, skuCode, expiryDate, ubd } = product
+  const { opening, production, demand, sale, closing, hasEntry, unit, batchNumber, skuCode, expiryDate, ubd, manufacturingDate, shelfLifeDays } = product
   const totalAvailable = opening.total + production.total
   const salePct = totalAvailable > 0 ? Math.min((sale.total / totalAvailable) * 100, 100) : 0
   const closingPct = totalAvailable > 0 ? Math.max(100 - salePct, 0) : 0
 
-  // Expiry status helper (Clean White / Light Monochrome)
+  const ubdVal = ubd || expiryDate || null
+  const ubdPct = calcUBDPercent(ubdVal, shelfLifeDays, manufacturingDate)
+
+  // Expiry / UBD status helper
   const getExpiryBadge = () => {
-    const targetDate = expiryDate || ubd
-    if (!targetDate) return null
+    if (!ubdVal) return null
 
-    const today = new Date().getTime()
-    const expTime = new Date(targetDate).getTime()
-    const diffDays = Math.ceil((expTime - today) / (1000 * 3600 * 24))
-
-    if (diffDays <= 0) {
-      return <Badge variant="outline" className="border-2 border-neutral-400 text-black text-[10px] px-1.5 py-0 uppercase tracking-wider font-extrabold bg-white">Expired ({targetDate})</Badge>
-    } else if (diffDays <= 15) {
-      return <Badge variant="outline" className="border-neutral-400 text-black font-bold text-[10px] px-1.5 py-0 bg-neutral-100">Near Exp: {diffDays}d ({targetDate})</Badge>
-    } else {
-      return <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-white text-neutral-800 border-neutral-300">Exp: {targetDate}</Badge>
-    }
+    return (
+      <div className="flex items-center gap-1">
+        {manufacturingDate && (
+          <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-white text-neutral-700 border-neutral-300 font-medium">
+            MFD: {manufacturingDate}
+          </Badge>
+        )}
+        <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-white text-neutral-700 border-neutral-300 font-medium">
+          UBD: {ubdVal}
+        </Badge>
+        {ubdPct !== null && (
+          <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-neutral-50 border-neutral-300 font-extrabold">
+            <span className={ubdPercentColor(ubdPct)}>
+              {ubdPct <= 0 ? "EXPIRED" : `UBD: ${ubdPct.toFixed(1)}%`}
+            </span>
+          </Badge>
+        )}
+      </div>
+    )
   }
 
   return (
@@ -79,20 +90,20 @@ export default function ProductRow({
         <div className="grid grid-cols-4 gap-2 text-xs font-semibold [font-variant-numeric:tabular-nums] mb-1.5 text-black">
           <div>
             <span className="block text-[10px] font-bold uppercase tracking-wider text-neutral-500">Total Avail</span>
-            <span className="text-sm font-bold text-black">{totalAvailable.toLocaleString()} {unit}</span>
+            <span className="text-sm font-bold text-black">{formatMixedUnit(totalAvailable, product.pcsPerCrt, unit, "PCS")}</span>
           </div>
           <div>
             <span className="block text-[10px] font-bold uppercase tracking-wider text-neutral-500">Demand</span>
-            <span className="text-sm font-bold text-black">{demand.total.toLocaleString()} {unit}</span>
+            <span className="text-sm font-bold text-black">{formatMixedUnit(demand.total, product.pcsPerCrt, unit, "PCS")}</span>
           </div>
           <div>
             <span className="block text-[10px] font-bold uppercase tracking-wider text-neutral-500">Sale (Out)</span>
-            <span className="text-sm font-bold text-black">{sale.total.toLocaleString()} {unit}</span>
+            <span className="text-sm font-bold text-black">{formatMixedUnit(sale.total, product.pcsPerCrt, unit, "PCS")}</span>
           </div>
           <div>
             <span className="block text-[10px] font-bold uppercase tracking-wider text-black">Current Stock</span>
             <span className="text-base font-black text-black">
-              {closing.total.toLocaleString()} {unit}
+              {formatMixedUnit(closing.total, product.pcsPerCrt, unit, "PCS")}
             </span>
           </div>
         </div>

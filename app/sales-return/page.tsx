@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Search, RotateCcw, Filter, ChevronRight, ChevronDown } from "lucide-react"
 import AddSalesReturnModal from "@/components/sales-return/AddSalesReturnModal"
 import DatePeriodSelector, { PeriodSelection } from "@/components/ui/date-period-selector"
+import { formatMixedUnit, calcUBDPercent, ubdPercentColor } from "@/lib/utils"
 import type { CategoryGroup, Product } from "@/components/dashboard/types"
 
 function todayStr() {
@@ -25,26 +26,35 @@ export default function SalesReturnPage() {
   const [selectedBatch, setSelectedBatch] = useState<string>("all")
   const [expandedProductIds, setExpandedProductIds] = useState<Set<string>>(new Set())
 
-  const fetchData = useCallback(async () => {
-    setLoading(true)
-    try {
-      const url =
-        period.mode === "range"
-          ? `/api/dashboard?fromDate=${period.fromDate}&toDate=${period.toDate}`
-          : `/api/dashboard?date=${period.date}`
-      const res = await fetch(url)
-      const json = await res.json()
-      if (json.success) setData(json.data)
-    } catch (e) {
-      console.error(e)
-    } finally {
-      setLoading(false)
-    }
-  }, [period])
+  const [refreshTrigger, setRefreshTrigger] = useState(0)
+  const fetchData = useCallback(() => setRefreshTrigger(prev => prev + 1), [])
 
   useEffect(() => {
-    fetchData()
-  }, [fetchData])
+    let ignore = false
+    async function loadData() {
+      try {
+        const url =
+          period.mode === "range"
+            ? `/api/dashboard?fromDate=${period.fromDate}&toDate=${period.toDate}`
+            : `/api/dashboard?date=${period.date}`
+        const res = await fetch(url)
+        const json = await res.json()
+        if (!ignore && json.success) {
+          setData(json.data)
+        }
+      } catch (e) {
+        console.error(e)
+      } finally {
+        if (!ignore) {
+          setLoading(false)
+        }
+      }
+    }
+    loadData()
+    return () => {
+      ignore = true
+    }
+  }, [period, refreshTrigger])
 
   const toggleProductExpand = (id: string) => {
     setExpandedProductIds(prev => {
@@ -167,7 +177,7 @@ export default function SalesReturnPage() {
                 {allProducts.map(p => {
                   const isExpanded = expandedProductIds.has(p.id)
                   const activeBatches = p.batchesList
-                    ? p.batchesList.filter(b => b.salesReturn && b.salesReturn.total > 0)
+                    ? p.batchesList.filter(b => (selectedBatch === "all" || b.batchNumber === selectedBatch) && (b.salesReturn?.total ?? 0) > 0)
                     : []
                   const hasBatches = activeBatches.length > 0
 
@@ -207,7 +217,14 @@ export default function SalesReturnPage() {
                         <td className="py-3 px-4 text-neutral-600 font-semibold">{p.category}</td>
                         <td className="py-3 px-4 text-right font-black text-base text-black">
                           {p.salesReturn && p.salesReturn.total > 0 ? (
-                            <span>{p.salesReturn.total.toLocaleString()} {p.unit}</span>
+                            <div>
+                              <span className="font-extrabold">{formatMixedUnit(p.salesReturn.total, p.pcsPerCrt, p.unit || "CRT", "PCS")}</span>
+                              {p.pcsPerCrt > 1 && (
+                                <div className="text-[11px] font-semibold text-neutral-500">
+                                  ({p.salesReturn.total.toLocaleString()} PCS)
+                                </div>
+                              )}
+                            </div>
                           ) : (
                             <span className="text-neutral-400 font-normal">0 {p.unit}</span>
                           )}
@@ -227,30 +244,51 @@ export default function SalesReturnPage() {
                                   <thead className="bg-neutral-100 text-black font-bold uppercase tracking-wider border-b border-neutral-200">
                                     <tr>
                                       <th className="py-2.5 px-3">Batch No</th>
-                                      <th className="py-2.5 px-3">Mfg Date</th>
-                                      <th className="py-2.5 px-3">Expiry Date</th>
+                                      <th className="py-2.5 px-3">MFD</th>
+                                      <th className="py-2.5 px-3">UBD</th>
+                                      <th className="py-2.5 px-3 text-center">UBD %</th>
                                       <th className="py-2.5 px-3 text-right font-black text-black">Sales Return Quantity</th>
                                     </tr>
                                   </thead>
                                   <tbody className="divide-y divide-neutral-200">
                                     {hasBatches ? (
-                                      activeBatches.map((b, idx) => (
-                                        <tr key={idx} className="hover:bg-neutral-50">
-                                          <td className="py-2 px-3 font-mono font-bold text-black">
-                                            <Badge variant="outline" className="border-neutral-300 text-black font-mono text-[11px]">
-                                              {b.batchNumber}
-                                            </Badge>
-                                          </td>
-                                          <td className="py-2 px-3 text-neutral-600 font-medium">{b.manufacturingDate || "—"}</td>
-                                          <td className="py-2 px-3 text-neutral-600 font-medium">{b.expiryDate || "—"}</td>
-                                          <td className="py-2 px-3 text-right font-black text-sm text-black">
-                                            +{b.salesReturn.total.toLocaleString()} {p.unit}
-                                          </td>
-                                        </tr>
-                                      ))
+                                      activeBatches.map((b, idx) => {
+                                        const ubdVal = b.ubd || b.expiryDate || null
+                                        const pct = calcUBDPercent(ubdVal, b.shelfLifeDays || p.shelfLifeDays, b.manufacturingDate)
+                                        return (
+                                          <tr key={idx} className="hover:bg-neutral-50">
+                                            <td className="py-2 px-3 font-mono font-bold text-black">
+                                              <Badge variant="outline" className="border-neutral-300 text-black font-mono text-[11px]">
+                                                {b.batchNumber}
+                                              </Badge>
+                                            </td>
+                                            <td className="py-2 px-3 text-neutral-600 font-medium">{b.manufacturingDate || "—"}</td>
+                                            <td className="py-2 px-3 text-neutral-600 font-medium">{ubdVal || "—"}</td>
+                                            <td className="py-2 px-3 text-center">
+                                              {pct === null ? (
+                                                <span className="text-neutral-400 text-xs">—</span>
+                                              ) : pct <= 0 ? (
+                                                <span className="text-red-600 font-black text-xs bg-red-50 px-1.5 py-0.5 rounded">EXPIRED</span>
+                                              ) : (
+                                                <span className={`text-xs ${ubdPercentColor(pct)}`}>{pct.toFixed(1)}%</span>
+                                              )}
+                                            </td>
+                                            <td className="py-2 px-3 text-right font-black text-sm text-black">
+                                              <div>
+                                                <span className="font-extrabold">+{formatMixedUnit(b.salesReturn.total, p.pcsPerCrt, p.unit || "CRT", "PCS")}</span>
+                                                {p.pcsPerCrt > 1 && (
+                                                  <div className="text-[10px] font-semibold text-neutral-400">
+                                                    ({b.salesReturn.total.toLocaleString()} PCS)
+                                                  </div>
+                                                )}
+                                              </div>
+                                            </td>
+                                          </tr>
+                                        )
+                                      })
                                     ) : (
                                       <tr>
-                                        <td colSpan={4} className="py-3 px-4 text-center text-neutral-500 font-medium">
+                                        <td colSpan={5} className="py-3 px-4 text-center text-neutral-500 font-medium">
                                           No sales return entry recorded for date {currentDateLabel}.
                                         </td>
                                       </tr>

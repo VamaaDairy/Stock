@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
+import { formatMixedUnit, pcsToMixed } from "@/lib/utils"
 import type { Product } from "@/components/dashboard/types"
 
 export default function AddDemandModal({
@@ -32,16 +33,16 @@ export default function AddDemandModal({
   const pcsPerCrt = product.pcsPerCrt || 1
 
   const [demPc, setDemPc] = useState(
-    product.demand.pc > 0
-      ? String(product.demand.pc)
-      : product.demand.crt > 0 && pcsPerCrt > 1
-      ? String(product.demand.crt * pcsPerCrt)
-      : String(product.demand.total || "")
+    (product.demand?.pc ?? 0) > 0
+      ? String(product.demand?.pc)
+      : (product.demand?.crt ?? 0) > 0 && pcsPerCrt > 1
+      ? String((product.demand?.crt ?? 0) * pcsPerCrt)
+      : String(product.demand?.total || "")
   )
-  const [demCrt, setDemCrt] = useState(String(product.demand.crt || ""))
-  const [demTotal, setDemTotal] = useState(String(product.demand.total || ""))
+  const [demCrt, setDemCrt] = useState(String(product.demand?.crt || ""))
+  const [demTotal, setDemTotal] = useState(String(product.demand?.total || ""))
 
-  // Smallest unit (Pcs) input handler with auto-conversion to Crt
+  // Smallest unit (Pcs) input handler with auto-conversion to Crt & mixed breakdown
   const handlePcsChange = (pcsVal: string) => {
     setDemPc(pcsVal)
     const pcs = parseFloat(pcsVal) || 0
@@ -51,13 +52,10 @@ export default function AddDemandModal({
       return
     }
 
-    if (product.unit === "PCS" || product.unit === "KG") {
-      setDemCrt(String(pcs))
-      setDemTotal(String(pcs))
-    } else if (pcsPerCrt > 1) {
-      const crtVal = Number((pcs / pcsPerCrt).toFixed(4))
-      setDemCrt(String(crtVal))
-      setDemTotal(String(crtVal))
+    if (pcsPerCrt > 1) {
+      const mixed = pcsToMixed(pcs, pcsPerCrt, product.unit || "CRT")
+      setDemCrt(String(mixed.crt))
+      setDemTotal(String(mixed.total))
     } else {
       setDemCrt(String(pcs))
       setDemTotal(String(pcs))
@@ -68,13 +66,10 @@ export default function AddDemandModal({
   const handleCrtChange = (crtVal: string) => {
     setDemCrt(crtVal)
     const crt = parseFloat(crtVal) || 0
-    if (product.unit === "PCS" || product.unit === "KG") {
-      setDemPc(String(crt))
-      setDemTotal(String(crt))
-    } else if (pcsPerCrt > 1) {
+    if (pcsPerCrt > 1) {
       const pcsVal = Math.round(crt * pcsPerCrt)
       setDemPc(String(pcsVal))
-      setDemTotal(String(crt))
+      setDemTotal(String(pcsVal))
     } else {
       setDemPc(String(crt))
       setDemTotal(String(crt))
@@ -141,36 +136,27 @@ export default function AddDemandModal({
             </Label>
             
             <div className="space-y-1.5">
-              <Label className="text-[11px] font-bold text-neutral-700">Smallest Unit (Pcs)</Label>
+              <Label className="text-[11px] font-bold text-neutral-700">Demand Quantity in Pieces (Pcs)</Label>
               <Input
                 type="number"
                 className="h-11 text-lg font-bold border border-neutral-300 text-black bg-white"
-                placeholder="Enter Pcs (e.g. 120)"
+                placeholder="Enter Pcs (e.g. 50)"
                 value={demPc}
                 onChange={e => handlePcsChange(e.target.value)}
               />
             </div>
 
-            {/* Calculated Conversion Result */}
+            {/* Live Mixed Unit Result Card */}
             {pcsPerCrt > 1 && (
-              <div className="grid grid-cols-2 gap-2 pt-1 border-t border-neutral-300">
-                <div>
-                  <Label className="text-[11px] font-bold text-neutral-600">Calculated {product.unit} (Crt/Box)</Label>
-                  <Input
-                    type="number"
-                    className="h-9 text-sm font-bold border-neutral-300 text-black bg-white"
-                    value={demCrt}
-                    onChange={e => handleCrtChange(e.target.value)}
-                  />
+              <div className="bg-white p-3 rounded-lg border border-neutral-300 mt-2 space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-neutral-600">Mixed Unit Breakdown:</span>
+                  <span className="text-sm font-extrabold text-black font-mono bg-neutral-100 px-2 py-0.5 rounded border border-neutral-200">
+                    {formatMixedUnit(parseFloat(demPc) || 0, pcsPerCrt, product.unit || "CRT", "PCS")}
+                  </span>
                 </div>
-                <div>
-                  <Label className="text-[11px] font-bold text-neutral-600">Total Primary Qty ({product.unit})</Label>
-                  <Input
-                    type="number"
-                    className="h-9 text-sm font-black border-neutral-300 text-black bg-neutral-100"
-                    value={demTotal}
-                    readOnly
-                  />
+                <div className="text-[11px] text-neutral-500 font-medium">
+                  {pcsPerCrt} pcs per crate · Crt: {demCrt} · Loose Pcs: {(parseFloat(demPc) || 0) % pcsPerCrt}
                 </div>
               </div>
             )}
@@ -178,7 +164,10 @@ export default function AddDemandModal({
 
           <div className="bg-neutral-50 p-3 rounded-lg border border-neutral-200 text-xs space-y-1">
             <p className="font-bold text-black">Live Stock Context:</p>
-            <p className="text-neutral-600 font-semibold">Current Available Stock: <span className="font-bold text-black">{product.currentStock} {product.unit}</span></p>
+            <p className="text-neutral-600 font-semibold">
+              Current Available Stock: <span className="font-bold text-black">{formatMixedUnit(product.currentStockTotal ?? product.currentStock, pcsPerCrt, product.unit || "CRT", "PCS")}</span>
+              {pcsPerCrt > 1 && <span className="text-neutral-500 ml-1">({(product.currentStockTotal ?? product.currentStock ?? 0).toLocaleString()} PCS)</span>}
+            </p>
           </div>
 
           {error && <p className="text-sm text-red-600 font-semibold p-2 rounded bg-red-50">{error}</p>}

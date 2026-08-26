@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
+import { formatMixedUnit, pcsToMixed } from "@/lib/utils"
 import type { Product } from "./types"
 
 export default function AddEntryModal({
@@ -269,9 +270,16 @@ export default function AddEntryModal({
 
           {/* Production Section */}
           <div className="space-y-1.5">
-            <Label className="text-sm font-black text-black uppercase tracking-wider">
-              Daily Production
-            </Label>
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-black text-black uppercase tracking-wider">
+                Daily Production
+              </Label>
+              {pcsPerCrt > 1 && (
+                <span className="text-xs font-bold text-black bg-neutral-100 px-2 py-0.5 rounded border border-neutral-300">
+                  {formatMixedUnit(parseFloat(prodTotal) || 0, pcsPerCrt, product.unit || "CRT", "PCS")}
+                </span>
+              )}
+            </div>
             <div className="grid grid-cols-3 gap-2">
               <div>
                 <Input className="h-11 text-base border-neutral-300 text-black font-semibold" placeholder={product.unit} value={prodCrt} onChange={e => handleProdCrtChange(e.target.value)} />
@@ -290,9 +298,16 @@ export default function AddEntryModal({
 
           {/* Demand Section */}
           <div className="space-y-1.5">
-            <Label className="text-sm font-black text-black uppercase tracking-wider">
-              Daily Demand (Orders Received)
-            </Label>
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-black text-black uppercase tracking-wider">
+                Daily Demand (Orders Received)
+              </Label>
+              {pcsPerCrt > 1 && (
+                <span className="text-xs font-bold text-black bg-neutral-100 px-2 py-0.5 rounded border border-neutral-300">
+                  {formatMixedUnit(parseFloat(demTotal) || 0, pcsPerCrt, product.unit || "CRT", "PCS")}
+                </span>
+              )}
+            </div>
             <div className="grid grid-cols-3 gap-2">
               <div>
                 <Input className="h-11 text-base border-neutral-300 text-black font-semibold" placeholder={product.unit} value={demCrt} onChange={e => handleDemCrtChange(e.target.value)} />
@@ -311,9 +326,16 @@ export default function AddEntryModal({
 
           {/* Sale Section (Reduces Stock) */}
           <div className="space-y-1.5">
-            <Label className="text-sm font-black text-black uppercase tracking-wider">
-              Daily Sale (Actual Dispatches)
-            </Label>
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-black text-black uppercase tracking-wider">
+                Daily Sale (Actual Dispatches)
+              </Label>
+              {pcsPerCrt > 1 && (
+                <span className="text-xs font-bold text-black bg-neutral-100 px-2 py-0.5 rounded border border-neutral-300">
+                  {formatMixedUnit(parseFloat(saleTotal) || 0, pcsPerCrt, product.unit || "CRT", "PCS")}
+                </span>
+              )}
+            </div>
             <div className="grid grid-cols-3 gap-2">
               <div>
                 <Input className="h-11 text-base border-neutral-300 text-black font-semibold" placeholder={product.unit} value={saleCrt} onChange={e => handleSaleCrtChange(e.target.value)} />

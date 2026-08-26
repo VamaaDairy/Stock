@@ -23,6 +23,84 @@ interface EntryInput {
   notes?: string
 }
 
+/**
+ * getAllTimeLiveStock — returns per-product all-time cumulative closing stock
+ * and a list of all batches that still have remaining stock (closing > 0).
+ * Used by dashboard functions to show true current inventory alongside
+ * date-specific production/sales data.
+ */
+async function getAllTimeLiveStock(): Promise<{
+  byProduct: Map<string, { closingCrt: number; closingPc: number; closingTotal: number }>
+  batchesByProduct: Map<string, any[]>
+}> {
+  const batchResult = await turso.execute({
+    sql: `SELECT
+            b.product_id,
+            b.batch_number,
+            MAX(b.manufacturing_date) as manufacturing_date,
+            MAX(b.ubd) as ubd,
+            MAX(b.expiry_date) as expiry_date,
+            MAX(b.shelf_life_days) as shelf_life_days,
+            SUM(dm.opening_crt) as opening_crt,
+            SUM(dm.opening_pc) as opening_pc,
+            SUM(dm.opening_total) as opening_total,
+            SUM(dm.production_crt) as production_crt,
+            SUM(dm.production_pc) as production_pc,
+            SUM(dm.production_total) as production_total,
+            SUM(dm.sale_crt) as sale_crt,
+            SUM(dm.sale_pc) as sale_pc,
+            SUM(dm.sale_total) as sale_total,
+            SUM(dm.sales_return_crt) as sales_return_crt,
+            SUM(dm.sales_return_pc) as sales_return_pc,
+            SUM(dm.sales_return_total) as sales_return_total,
+            SUM(dm.closing_crt) as closing_crt,
+            SUM(dm.closing_pc) as closing_pc,
+            SUM(dm.closing_total) as closing_total
+          FROM batches b
+          JOIN daily_metrics dm ON dm.batch_id = b.id
+          GROUP BY b.product_id, b.batch_number
+          ORDER BY b.product_id, b.batch_number`,
+  })
+
+  const byProduct = new Map<string, { closingCrt: number; closingPc: number; closingTotal: number }>()
+  const batchesByProduct = new Map<string, any[]>()
+
+  for (const row of batchResult.rows) {
+    const pid = String(row.product_id)
+    const closingCrt = Number(row.closing_crt ?? 0)
+    const closingPc = Number(row.closing_pc ?? 0)
+    const closingTotal = Number(row.closing_total ?? 0)
+
+    // Accumulate product-level totals
+    const existing = byProduct.get(pid) ?? { closingCrt: 0, closingPc: 0, closingTotal: 0 }
+    byProduct.set(pid, {
+      closingCrt: existing.closingCrt + closingCrt,
+      closingPc: existing.closingPc + closingPc,
+      closingTotal: existing.closingTotal + closingTotal,
+    })
+
+    // Only include batches with remaining stock or some production activity
+    if (closingTotal > 0 || Number(row.production_total ?? 0) > 0) {
+      if (!batchesByProduct.has(pid)) batchesByProduct.set(pid, [])
+      batchesByProduct.get(pid)!.push({
+        batchNumber: String(row.batch_number || ""),
+        manufacturingDate: row.manufacturing_date ? String(row.manufacturing_date) : null,
+        ubd: row.ubd ? String(row.ubd) : null,
+        expiryDate: row.expiry_date ? String(row.expiry_date) : null,
+        shelfLifeDays: row.shelf_life_days !== null ? Number(row.shelf_life_days) : null,
+        opening: { crt: Number(row.opening_crt ?? 0), pc: Number(row.opening_pc ?? 0), total: Number(row.opening_total ?? 0) },
+        production: { crt: Number(row.production_crt ?? 0), pc: Number(row.production_pc ?? 0), total: Number(row.production_total ?? 0) },
+        sale: { crt: Number(row.sale_crt ?? 0), pc: Number(row.sale_pc ?? 0), total: Number(row.sale_total ?? 0) },
+        salesReturn: { crt: Number(row.sales_return_crt ?? 0), pc: Number(row.sales_return_pc ?? 0), total: Number(row.sales_return_total ?? 0) },
+        closing: { crt: closingCrt, pc: closingPc, total: closingTotal },
+        closingDisplay: formatSmallestUnit(closingCrt, closingPc, closingTotal),
+      })
+    }
+  }
+
+  return { byProduct, batchesByProduct }
+}
+
 async function getPreviousClosing(productId: string, date: string): Promise<Qty> {
   const result = await turso.execute({
     sql: `SELECT SUM(dm.closing_crt) as closing_crt, SUM(dm.closing_pc) as closing_pc, SUM(dm.closing_total) as closing_total
@@ -273,6 +351,7 @@ export async function getDashboardData(date: string) {
     sql: `SELECT id, name, sku_code, category, unit, COALESCE(pcs_per_crt, 1) as pcs_per_crt, COALESCE(shelf_life_days, 0) as shelf_life_days FROM products ORDER BY category, name`,
   })
 
+  // Date-specific metrics (production/demand/sales for the selected date only)
   const metricsResult = await turso.execute({
     sql: `SELECT p.id as product_id,
                  GROUP_CONCAT(DISTINCT b.batch_number) as batch_number,
@@ -295,9 +374,17 @@ export async function getDashboardData(date: string) {
     args: [date],
   })
 
-  // Fetch individual batch breakdowns for that date
-  const batchBreakdownResult = await turso.execute({
-    sql: `SELECT b.product_id, b.batch_number, b.manufacturing_date, b.ubd, b.expiry_date, b.shelf_life_days,
+  // All-time live stock (date-independent) — always shows true current inventory
+  const liveStock = await getAllTimeLiveStock()
+
+  // Date-specific batch breakdown (only batches recorded on the selected date)
+  const dateBatchesResult = await turso.execute({
+    sql: `SELECT b.product_id,
+                 b.batch_number,
+                 b.manufacturing_date,
+                 b.ubd,
+                 b.expiry_date,
+                 b.shelf_life_days,
                  dm.opening_crt, dm.opening_pc, dm.opening_total,
                  dm.production_crt, dm.production_pc, dm.production_total,
                  dm.demand_crt, dm.demand_pc, dm.demand_total,
@@ -311,11 +398,11 @@ export async function getDashboardData(date: string) {
     args: [date],
   })
 
-  const batchesByProduct = new Map<string, any[]>()
-  for (const row of batchBreakdownResult.rows) {
+  const batchesByProductDate = new Map<string, any[]>()
+  for (const row of dateBatchesResult.rows) {
     const pid = String(row.product_id)
-    if (!batchesByProduct.has(pid)) batchesByProduct.set(pid, [])
-    batchesByProduct.get(pid)!.push({
+    if (!batchesByProductDate.has(pid)) batchesByProductDate.set(pid, [])
+    batchesByProductDate.get(pid)!.push({
       batchNumber: String(row.batch_number || ""),
       manufacturingDate: row.manufacturing_date ? String(row.manufacturing_date) : null,
       ubd: row.ubd ? String(row.ubd) : null,
@@ -343,7 +430,11 @@ export async function getDashboardData(date: string) {
 
     if (!categories.has(category)) categories.set(category, [])
 
-    const closingTotal = Number(metrics?.closing_total ?? 0)
+    // All-time current stock (date-independent)
+    const liveStockForProduct = liveStock.byProduct.get(productId)
+    const currentStockTotal = liveStockForProduct?.closingTotal ?? 0
+    const currentStockCrt = liveStockForProduct?.closingCrt ?? 0
+    const currentStockPc = liveStockForProduct?.closingPc ?? 0
 
     const effectiveShelfLife = metrics?.shelf_life_days !== null && metrics?.shelf_life_days !== undefined
       ? Number(metrics.shelf_life_days)
@@ -361,15 +452,21 @@ export async function getDashboardData(date: string) {
       ubd: metrics?.ubd ? String(metrics.ubd) : null,
       expiryDate: metrics?.expiry_date ? String(metrics.expiry_date) : null,
       shelfLifeDays: effectiveShelfLife,
+      // Date-specific fields for the selected day
       opening: { crt: Number(metrics?.opening_crt ?? 0), pc: Number(metrics?.opening_pc ?? 0), total: Number(metrics?.opening_total ?? 0) },
       production: { crt: Number(metrics?.production_crt ?? 0), pc: Number(metrics?.production_pc ?? 0), total: Number(metrics?.production_total ?? 0) },
       demand: { crt: Number(metrics?.demand_crt ?? 0), pc: Number(metrics?.demand_pc ?? 0), total: Number(metrics?.demand_total ?? 0) },
       sale: { crt: Number(metrics?.sale_crt ?? 0), pc: Number(metrics?.sale_pc ?? 0), total: Number(metrics?.sale_total ?? 0) },
       salesReturn: { crt: Number(metrics?.sales_return_crt ?? 0), pc: Number(metrics?.sales_return_pc ?? 0), total: Number(metrics?.sales_return_total ?? 0) },
-      closing: { crt: Number(metrics?.closing_crt ?? 0), pc: Number(metrics?.closing_pc ?? 0), total: closingTotal },
+      closing: { crt: Number(metrics?.closing_crt ?? 0), pc: Number(metrics?.closing_pc ?? 0), total: Number(metrics?.closing_total ?? 0) },
       salesTarget: Number(metrics?.sales_target ?? 0),
-      currentStock: closingTotal,
-      batchesList: batchesByProduct.get(productId) || [],
+      // currentStock = all-time cumulative (date-independent, never filtered by date)
+      currentStock: currentStockTotal,
+      currentStockCrt,
+      currentStockPc,
+      currentStockDisplay: formatSmallestUnit(currentStockCrt, currentStockPc, currentStockTotal),
+      // batchesList = ONLY batches recorded on this specific date
+      batchesList: batchesByProductDate.get(productId) || [],
     })
   }
 
@@ -415,9 +512,14 @@ export async function getPeriodDashboardData(startDate: string, endDate: string)
     args: [startDate, endDate],
   })
 
-  // Fetch batch details for period
-  const batchBreakdownResult = await turso.execute({
-    sql: `SELECT b.product_id, b.batch_number, b.manufacturing_date, b.ubd, b.expiry_date, b.shelf_life_days,
+  // Period-specific batch breakdown (only batches recorded within the selected date range)
+  const periodBatchesResult = await turso.execute({
+    sql: `SELECT b.product_id,
+                 b.batch_number,
+                 MIN(b.manufacturing_date) as manufacturing_date,
+                 MAX(b.ubd) as ubd,
+                 MAX(b.expiry_date) as expiry_date,
+                 MAX(b.shelf_life_days) as shelf_life_days,
                  SUM(dm.opening_crt) as opening_crt, SUM(dm.opening_pc) as opening_pc, SUM(dm.opening_total) as opening_total,
                  SUM(dm.production_crt) as production_crt, SUM(dm.production_pc) as production_pc, SUM(dm.production_total) as production_total,
                  SUM(dm.demand_crt) as demand_crt, SUM(dm.demand_pc) as demand_pc, SUM(dm.demand_total) as demand_total,
@@ -432,11 +534,11 @@ export async function getPeriodDashboardData(startDate: string, endDate: string)
     args: [startDate, endDate],
   })
 
-  const batchesByProduct = new Map<string, any[]>()
-  for (const row of batchBreakdownResult.rows) {
+  const batchesByProductPeriod = new Map<string, any[]>()
+  for (const row of periodBatchesResult.rows) {
     const pid = String(row.product_id)
-    if (!batchesByProduct.has(pid)) batchesByProduct.set(pid, [])
-    batchesByProduct.get(pid)!.push({
+    if (!batchesByProductPeriod.has(pid)) batchesByProductPeriod.set(pid, [])
+    batchesByProductPeriod.get(pid)!.push({
       batchNumber: String(row.batch_number || ""),
       manufacturingDate: row.manufacturing_date ? String(row.manufacturing_date) : null,
       ubd: row.ubd ? String(row.ubd) : null,
@@ -451,6 +553,9 @@ export async function getPeriodDashboardData(startDate: string, endDate: string)
     })
   }
 
+  // All-time live stock (date-independent) — always shows true current inventory
+  const liveStock = await getAllTimeLiveStock()
+
   const metricsByProduct = new Map(
     metricsResult.rows.map(row => [String(row.product_id), row])
   )
@@ -464,11 +569,11 @@ export async function getPeriodDashboardData(startDate: string, endDate: string)
 
     if (!categories.has(category)) categories.set(category, [])
 
-    const opening = await getPreviousClosing(productId, startDate)
-    const prodTotal = Number(metrics?.production_total ?? 0)
-    const saleTotal = Number(metrics?.sale_total ?? 0)
-    const salesReturnTotal = Number(metrics?.sales_return_total ?? 0)
-    const closingTotal = opening.total + prodTotal + salesReturnTotal - saleTotal
+    // All-time current stock (date-independent)
+    const liveStockForProduct = liveStock.byProduct.get(productId)
+    const currentStockTotal = liveStockForProduct?.closingTotal ?? 0
+    const currentStockCrt = liveStockForProduct?.closingCrt ?? 0
+    const currentStockPc = liveStockForProduct?.closingPc ?? 0
 
     const effectiveShelfLife = metrics?.shelf_life_days !== null && metrics?.shelf_life_days !== undefined
       ? Number(metrics.shelf_life_days)
@@ -486,15 +591,22 @@ export async function getPeriodDashboardData(startDate: string, endDate: string)
       ubd: metrics?.ubd ? String(metrics.ubd) : null,
       expiryDate: metrics?.expiry_date ? String(metrics.expiry_date) : null,
       shelfLifeDays: effectiveShelfLife,
-      opening: opening,
-      production: { crt: Number(metrics?.production_crt ?? 0), pc: Number(metrics?.production_pc ?? 0), total: prodTotal },
+      // Period-specific fields for the selected range
+      opening: { crt: 0, pc: 0, total: 0 },
+      production: { crt: Number(metrics?.production_crt ?? 0), pc: Number(metrics?.production_pc ?? 0), total: Number(metrics?.production_total ?? 0) },
       demand: { crt: Number(metrics?.demand_crt ?? 0), pc: Number(metrics?.demand_pc ?? 0), total: Number(metrics?.demand_total ?? 0) },
-      sale: { crt: Number(metrics?.sale_crt ?? 0), pc: Number(metrics?.sale_pc ?? 0), total: saleTotal },
-      salesReturn: { crt: Number(metrics?.sales_return_crt ?? 0), pc: Number(metrics?.sales_return_pc ?? 0), total: salesReturnTotal },
-      closing: { crt: 0, pc: 0, total: closingTotal },
+      sale: { crt: Number(metrics?.sale_crt ?? 0), pc: Number(metrics?.sale_pc ?? 0), total: Number(metrics?.sale_total ?? 0) },
+      salesReturn: { crt: Number(metrics?.sales_return_crt ?? 0), pc: Number(metrics?.sales_return_pc ?? 0), total: Number(metrics?.sales_return_total ?? 0) },
+      closing: { crt: currentStockCrt, pc: currentStockPc, total: currentStockTotal },
       salesTarget: Number(metrics?.sales_target ?? 0),
-      currentStock: closingTotal,
-      batchesList: batchesByProduct.get(productId) || [],
+      // currentStock = all-time cumulative (date-independent, never filtered by date)
+      currentStock: currentStockTotal,
+      currentStockTotal: currentStockTotal,
+      currentStockCrt,
+      currentStockPc,
+      currentStockDisplay: formatSmallestUnit(currentStockCrt, currentStockPc, currentStockTotal),
+      // batchesList = ONLY batches recorded during this specific period
+      batchesList: batchesByProductPeriod.get(productId) || [],
     })
   }
 
@@ -616,6 +728,16 @@ export async function getCurrentStock() {
     const closingTotal = Number(totals?.closing_total ?? 0)
     const pcsPerCrt = Number(p.pcs_per_crt || 1)
 
+    const prodCrt = Number(totals?.production_crt ?? 0)
+    const prodPc = Number(totals?.production_pc ?? 0)
+    const prodTotal = Number(totals?.production_total ?? 0)
+    const sCrt = Number(totals?.sale_crt ?? 0)
+    const sPc = Number(totals?.sale_pc ?? 0)
+    const sTotal = Number(totals?.sale_total ?? 0)
+    const retTotal = Number(totals?.sales_return_total ?? 0)
+    const demTotal = Number(totals?.demand_total ?? 0)
+    const batchNums = totals?.batch_numbers ? String(totals.batch_numbers) : null
+
     categories.get(category)!.push({
       id: productId,
       name: p.name,
@@ -625,20 +747,33 @@ export async function getCurrentStock() {
       pcsPerCrt,
       shelfLifeDays: p.shelf_life_days ? Number(p.shelf_life_days) : null,
       hasEntry: !!totals,
-      batchNumbers: totals?.batch_numbers ? String(totals.batch_numbers) : null,
+      batchNumber: batchNums,
+      batchNumbers: batchNums,
+      manufacturingDate: null,
+      ubd: null,
+      expiryDate: null,
+      // Standard Qty blocks for UI components
+      opening: { crt: 0, pc: 0, total: 0 },
+      production: { crt: prodCrt, pc: prodPc, total: prodTotal },
+      demand: { crt: 0, pc: 0, total: demTotal },
+      sale: { crt: sCrt, pc: sPc, total: sTotal },
+      salesReturn: { crt: 0, pc: 0, total: retTotal },
+      closing: { crt: closingCrt, pc: closingPc, total: closingTotal },
+      salesTarget: 0,
       // Totals (all-time)
-      productionTotal: Number(totals?.production_total ?? 0),
-      productionCrt: Number(totals?.production_crt ?? 0),
-      productionPc: Number(totals?.production_pc ?? 0),
-      saleTotal: Number(totals?.sale_total ?? 0),
-      saleCrt: Number(totals?.sale_crt ?? 0),
-      salePc: Number(totals?.sale_pc ?? 0),
-      salesReturnTotal: Number(totals?.sales_return_total ?? 0),
-      demandTotal: Number(totals?.demand_total ?? 0),
+      productionTotal: prodTotal,
+      productionCrt: prodCrt,
+      productionPc: prodPc,
+      saleTotal: sTotal,
+      saleCrt: sCrt,
+      salePc: sPc,
+      salesReturnTotal: retTotal,
+      demandTotal: demTotal,
       // Current stock (closing balance all-time)
+      currentStock: closingTotal,
+      currentStockTotal: closingTotal,
       currentStockCrt: closingCrt,
       currentStockPc: closingPc,
-      currentStockTotal: closingTotal,
       // Human-readable smallest-unit display
       currentStockDisplay: formatSmallestUnit(closingCrt, closingPc, closingTotal),
       batchesList: batchesByProduct.get(productId) || [],

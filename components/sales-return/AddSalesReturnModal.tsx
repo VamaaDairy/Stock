@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { generateDairyBatchCode } from "@/lib/utils/batch"
+import { formatMixedUnit, pcsToMixed } from "@/lib/utils"
 import type { Product } from "@/components/dashboard/types"
 
 export default function AddSalesReturnModal({
@@ -47,7 +48,7 @@ export default function AddSalesReturnModal({
   const [returnCrt, setReturnCrt] = useState(String(product.salesReturn?.crt || ""))
   const [returnTotal, setReturnTotal] = useState(String(product.salesReturn?.total || ""))
 
-  // Smallest unit (Pcs) input handler with auto-conversion to Crt
+  // Smallest unit (Pcs) input handler with auto-conversion to Crt & mixed breakdown
   const handlePcsChange = (pcsVal: string) => {
     setReturnPc(pcsVal)
     const pcs = parseFloat(pcsVal) || 0
@@ -58,13 +59,10 @@ export default function AddSalesReturnModal({
       return
     }
 
-    if (product.unit === "PCS" || product.unit === "KG") {
-      setReturnCrt(String(pcs))
-      setReturnTotal(String(pcs))
-    } else if (pcsPerCrt > 1) {
-      const crtVal = Number((pcs / pcsPerCrt).toFixed(4))
-      setReturnCrt(String(crtVal))
-      setReturnTotal(String(crtVal))
+    if (pcsPerCrt > 1) {
+      const mixed = pcsToMixed(pcs, pcsPerCrt, product.unit || "CRT")
+      setReturnCrt(String(mixed.crt))
+      setReturnTotal(String(mixed.total))
     } else {
       setReturnCrt(String(pcs))
       setReturnTotal(String(pcs))
@@ -75,13 +73,10 @@ export default function AddSalesReturnModal({
   const handleCrtChange = (crtVal: string) => {
     setReturnCrt(crtVal)
     const crt = parseFloat(crtVal) || 0
-    if (product.unit === "PCS" || product.unit === "KG") {
-      setReturnPc(String(crt))
-      setReturnTotal(String(crt))
-    } else if (pcsPerCrt > 1) {
+    if (pcsPerCrt > 1) {
       const pcsVal = Math.round(crt * pcsPerCrt)
       setReturnPc(String(pcsVal))
-      setReturnTotal(String(crt))
+      setReturnTotal(String(pcsVal))
     } else {
       setReturnPc(String(crt))
       setReturnTotal(String(crt))
@@ -167,7 +162,7 @@ export default function AddSalesReturnModal({
             </Label>
             
             <div className="space-y-1.5">
-              <Label className="text-[11px] font-bold text-neutral-700">Smallest Unit (Pcs)</Label>
+              <Label className="text-[11px] font-bold text-neutral-700">Return Quantity in Pieces (Pcs)</Label>
               <Input
                 type="number"
                 className="h-11 text-lg font-bold border border-neutral-300 text-black bg-white"
@@ -177,26 +172,17 @@ export default function AddSalesReturnModal({
               />
             </div>
 
-            {/* Calculated Conversion Result */}
+            {/* Live Mixed Unit Result Card */}
             {pcsPerCrt > 1 && (
-              <div className="grid grid-cols-2 gap-2 pt-1 border-t border-neutral-300">
-                <div>
-                  <Label className="text-[11px] font-bold text-neutral-600">Calculated {product.unit} (Crt/Box)</Label>
-                  <Input
-                    type="number"
-                    className="h-9 text-sm font-bold border-neutral-300 text-black bg-white"
-                    value={returnCrt}
-                    onChange={e => handleCrtChange(e.target.value)}
-                  />
+              <div className="bg-white p-3 rounded-lg border border-neutral-300 mt-2 space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-neutral-600">Mixed Unit Breakdown:</span>
+                  <span className="text-sm font-extrabold text-black font-mono bg-neutral-100 px-2 py-0.5 rounded border border-neutral-200">
+                    {formatMixedUnit(parseFloat(returnPc) || 0, pcsPerCrt, product.unit || "CRT", "PCS")}
+                  </span>
                 </div>
-                <div>
-                  <Label className="text-[11px] font-bold text-neutral-600">Total Primary Qty ({product.unit})</Label>
-                  <Input
-                    type="number"
-                    className="h-9 text-sm font-black border-neutral-300 text-black bg-neutral-100"
-                    value={returnTotal}
-                    readOnly
-                  />
+                <div className="text-[11px] text-neutral-500 font-medium">
+                  {pcsPerCrt} pcs per crate · Crt: {returnCrt} · Loose Pcs: {(parseFloat(returnPc) || 0) % pcsPerCrt}
                 </div>
               </div>
             )}

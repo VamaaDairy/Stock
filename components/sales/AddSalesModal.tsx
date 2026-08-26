@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { generateDairyBatchCode } from "@/lib/utils/batch"
+import { formatMixedUnit, pcsToMixed } from "@/lib/utils"
 import type { Product } from "@/components/dashboard/types"
 
 export default function AddSalesModal({
@@ -31,7 +32,7 @@ export default function AddSalesModal({
   const [error, setError] = useState<string | null>(null)
 
   const pcsPerCrt = product.pcsPerCrt || 1
-  const totalAvailable = product.opening.total + product.production.total
+  const totalAvailable = (product.opening?.total ?? 0) + (product.production?.total ?? 0) || (product.currentStockTotal ?? product.currentStock ?? 0)
 
   const defaultBatch = product.batchNumber && product.batchNumber !== "B1"
     ? product.batchNumber
@@ -39,19 +40,19 @@ export default function AddSalesModal({
 
   const [batchNumber, setBatchNumber] = useState(defaultBatch)
   const [salePc, setSalePc] = useState(
-    product.sale.pc > 0
-      ? String(product.sale.pc)
-      : product.sale.crt > 0 && pcsPerCrt > 1
-      ? String(product.sale.crt * pcsPerCrt)
-      : String(product.sale.total || "")
+    (product.sale?.pc ?? 0) > 0
+      ? String(product.sale?.pc)
+      : (product.sale?.crt ?? 0) > 0 && pcsPerCrt > 1
+      ? String((product.sale?.crt ?? 0) * pcsPerCrt)
+      : String(product.sale?.total || "")
   )
-  const [saleCrt, setSaleCrt] = useState(String(product.sale.crt || ""))
-  const [saleTotal, setSaleTotal] = useState(String(product.sale.total || ""))
+  const [saleCrt, setSaleCrt] = useState(String(product.sale?.crt || ""))
+  const [saleTotal, setSaleTotal] = useState(String(product.sale?.total || ""))
 
   // Helper to validate sale total against total available stock
   const validateSaleStock = (saleVal: number) => {
     if (saleVal > totalAvailable) {
-      setError(`⚠️ CANNOT DISPATCH: Entered Sale Out (${saleVal} ${product.unit}) exceeds Total Available Stock (${totalAvailable} ${product.unit}).`)
+      setError(`⚠️ CANNOT DISPATCH: Entered Sale Out (${saleVal} PCS) exceeds Total Available Stock (${formatMixedUnit(totalAvailable, pcsPerCrt, product.unit || "CRT", "PCS")}).`)
       return false
     } else {
       setError(null)
@@ -59,7 +60,7 @@ export default function AddSalesModal({
     }
   }
 
-  // Smallest unit (Pcs) input handler with auto-conversion to Crt
+  // Smallest unit (Pcs) input handler with auto-conversion to Crt & mixed breakdown
   const handlePcsChange = (pcsVal: string) => {
     setSalePc(pcsVal)
     const pcs = parseFloat(pcsVal) || 0
@@ -70,44 +71,32 @@ export default function AddSalesModal({
       return
     }
 
-    let calculatedTotal = pcs
-    if (product.unit === "PCS" || product.unit === "KG") {
-      setSaleCrt(String(pcs))
-      setSaleTotal(String(pcs))
-      calculatedTotal = pcs
-    } else if (pcsPerCrt > 1) {
-      const crtVal = Number((pcs / pcsPerCrt).toFixed(4))
-      setSaleCrt(String(crtVal))
-      setSaleTotal(String(crtVal))
-      calculatedTotal = crtVal
+    if (pcsPerCrt > 1) {
+      const mixed = pcsToMixed(pcs, pcsPerCrt, product.unit || "CRT")
+      setSaleCrt(String(mixed.crt))
+      setSaleTotal(String(mixed.total))
     } else {
       setSaleCrt(String(pcs))
       setSaleTotal(String(pcs))
-      calculatedTotal = pcs
     }
 
-    validateSaleStock(calculatedTotal)
+    validateSaleStock(pcs)
   }
 
   // Crt input handler (manual override if needed)
   const handleCrtChange = (crtVal: string) => {
     setSaleCrt(crtVal)
     const crt = parseFloat(crtVal) || 0
-    let calculatedTotal = crt
-
-    if (product.unit === "PCS" || product.unit === "KG") {
-      setSalePc(String(crt))
-      setSaleTotal(String(crt))
-    } else if (pcsPerCrt > 1) {
+    if (pcsPerCrt > 1) {
       const pcsVal = Math.round(crt * pcsPerCrt)
       setSalePc(String(pcsVal))
-      setSaleTotal(String(crt))
+      setSaleTotal(String(pcsVal))
+      validateSaleStock(pcsVal)
     } else {
       setSalePc(String(crt))
       setSaleTotal(String(crt))
+      validateSaleStock(crt)
     }
-
-    validateSaleStock(calculatedTotal)
   }
 
   async function handleSubmit() {
@@ -180,8 +169,15 @@ export default function AddSalesModal({
         <div className="space-y-4 py-2 text-black">
           {/* Available Stock Verification Banner */}
           <div className="bg-neutral-100 p-3 rounded-lg border border-neutral-300 text-xs flex justify-between items-center">
-            <span className="font-bold uppercase tracking-wider text-neutral-600">Available Stock Verification:</span>
-            <span className="font-black text-sm text-black">{totalAvailable.toLocaleString()} {product.unit}</span>
+            <span className="font-bold uppercase tracking-wider text-neutral-600">Available Stock:</span>
+            <div className="text-right">
+              <span className="font-black text-sm text-black">
+                {formatMixedUnit(totalAvailable, pcsPerCrt, product.unit || "CRT", "PCS")}
+              </span>
+              {pcsPerCrt > 1 && (
+                <div className="text-[10px] text-neutral-500 font-semibold">({totalAvailable.toLocaleString()} PCS)</div>
+              )}
+            </div>
           </div>
 
           {/* Batch Code Field */}
@@ -202,36 +198,27 @@ export default function AddSalesModal({
             </Label>
             
             <div className="space-y-1.5">
-              <Label className="text-[11px] font-bold text-neutral-700">Smallest Unit (Pcs)</Label>
+              <Label className="text-[11px] font-bold text-neutral-700">Dispatch Quantity in Pieces (Pcs)</Label>
               <Input
                 type="number"
                 className="h-11 text-lg font-bold border border-neutral-300 text-black bg-white"
-                placeholder="Enter Pcs (e.g. 120)"
+                placeholder="Enter Pcs (e.g. 50)"
                 value={salePc}
                 onChange={e => handlePcsChange(e.target.value)}
               />
             </div>
 
-            {/* Calculated Conversion Result */}
+            {/* Live Mixed Unit Result Card */}
             {pcsPerCrt > 1 && (
-              <div className="grid grid-cols-2 gap-2 pt-1 border-t border-neutral-300">
-                <div>
-                  <Label className="text-[11px] font-bold text-neutral-600">Calculated {product.unit} (Crt/Box)</Label>
-                  <Input
-                    type="number"
-                    className="h-9 text-sm font-bold border-neutral-300 text-black bg-white"
-                    value={saleCrt}
-                    onChange={e => handleCrtChange(e.target.value)}
-                  />
+              <div className="bg-white p-3 rounded-lg border border-neutral-300 mt-2 space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-neutral-600">Mixed Unit Breakdown:</span>
+                  <span className="text-sm font-extrabold text-black font-mono bg-neutral-100 px-2 py-0.5 rounded border border-neutral-200">
+                    {formatMixedUnit(parseFloat(salePc) || 0, pcsPerCrt, product.unit || "CRT", "PCS")}
+                  </span>
                 </div>
-                <div>
-                  <Label className="text-[11px] font-bold text-neutral-600">Total Primary Qty ({product.unit})</Label>
-                  <Input
-                    type="number"
-                    className="h-9 text-sm font-black border-neutral-300 text-black bg-neutral-100"
-                    value={saleTotal}
-                    readOnly
-                  />
+                <div className="text-[11px] text-neutral-500 font-medium">
+                  {pcsPerCrt} pcs per crate · Crt: {saleCrt} · Loose Pcs: {(parseFloat(salePc) || 0) % pcsPerCrt}
                 </div>
               </div>
             )}

@@ -12,10 +12,11 @@ export interface BatchDetail {
   shelfLifeDays: number | null
   opening: Qty
   production: Qty
-  demand: Qty
+  demand?: Qty
   sale: Qty
   salesReturn: Qty
   closing: Qty
+  closingDisplay?: string
 }
 
 export interface Product {
@@ -27,6 +28,7 @@ export interface Product {
   pcsPerCrt: number
   hasEntry: boolean
   batchNumber: string | null
+  batchNumbers?: string | null
   manufacturingDate: string | null
   ubd: string | null
   expiryDate: string | null
@@ -35,10 +37,17 @@ export interface Product {
   production: Qty
   demand: Qty
   sale: Qty
-  salesReturn: Qty
+  salesReturn?: Qty
   closing: Qty
   salesTarget?: number
   currentStock: number
+  currentStockTotal?: number
+  currentStockCrt?: number
+  currentStockPc?: number
+  currentStockDisplay?: string
+  productionTotal?: number
+  saleTotal?: number
+  salesReturnTotal?: number
   batchesList?: BatchDetail[]
 }
 

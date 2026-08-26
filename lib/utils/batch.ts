@@ -83,51 +83,52 @@ const PRODUCT_CODE_BY_ID: Record<string, string> = {
   "46": "M",  // Gaia Pure Cow Ghee CEKA 900ml
 
   // Rabdi & Shrikhand
-  "47": "V",  // GAIA SHAHI RABDI TRAY → Rabdi = V
-  "48": "V",  // Gaia Shahi Rabdi 80g Box 6Pc
-  "49": "V",  // Gaia Shahi Rabdi 80g 12Pc
-  "50": "G",  // Gaia Shrikhand 80g → Shri Khand = G
-  "51": "G",  // Gaia Shrikhand 80g Box 6Pc
+  "47": "V",  // GAIA SHAHI RABDI 80g → Rabdi = V
+  "48": "G",  // Gaia Shrikhand KE 80g → Shrikhand = G
+  "49": "G",  // Gaia Shrikhand KE 80g Box 6Pc → Shrikhand = G
 
   // Peda & Khowa
-  "52": "N",  // Gaia Milk Peda 200g → Malai Peda = N
-  "53": "P",  // GAIA BROWN KHOWA → Khoa = P
+  "50": "N",  // Gaia Peda 200g → Malai Peda = N
+  "51": "N",  // Gaia Kesar Peda 200g → Malai Peda = N
+  "52": "P",  // Khowa White → Khoa = P
+  "53": "P",  // Khowa Brown → Khoa = P
 }
 
-// Size code lookup by product ID (based on pack size)
+// Size code lookup by product ID (based on pack size from Excel sheet)
+// 80g = Q, 180ml = A, 200g/ml = J, 400g = K, 500g/ml = L, 1kg/1L = M, 5kg/5L = N, 15kg = O
 const SIZE_CODE_BY_ID: Record<string, string> = {
-  // Milk (500ml = C)
-  "1": "C",   // 500ml
-  "2": "C",   // 500ml
+  // Milk
+  "1": "L",   // 500ml → L
+  "2": "L",   // 500ml → L
 
   // UHT Milk
-  "3": "I",   // 110ml → closest is 100ml = I
-  "4": "B",   // 400ml → 200ml=B? Actually no exact match; use K (400g equivalent)
-  "5": "D",   // 1L → 1000ml = D
-  "6": "D",   // 1L
-  "7": "D",   // 1L
+  "3": "Q",   // 110ml → Q
+  "4": "K",   // 400ml → K
+  "5": "M",   // 1L → M
+  "6": "M",   // 1L → M
+  "7": "M",   // 1L → M
 
   // Dahi
-  "8": "K",   // 200g → K
-  "9": "L",   // 400g → L
-  "10": "N",  // 1kg → N
-  "11": "O",  // 5kg → O
-  "12": "O",  // 5kg → O
-  "13": "P",  // 15kg → P
-  "14": "K",  // 200g → K
-  "15": "K",  // 200g → K
+  "8": "J",   // 200g → J
+  "9": "K",   // 400g → K
+  "10": "M",  // 1kg → M
+  "11": "N",  // 5kg → N
+  "12": "N",  // 5kg → N
+  "13": "O",  // 15kg → O
+  "14": "J",  // 200g → J
+  "15": "J",  // 200g → J
   "16": "Q",  // 80g → Q
-  "17": "G",  // 90g → closest is G (90ml/gm)
-  "18": "G",  // 90g → G
+  "17": "Q",  // 90g → Q
+  "18": "Q",  // 90g → Q
 
   // Kadhi Dahi
-  "19": "K",  // 200g → K
-  "20": "N",  // 1kg → N
-  "21": "O",  // 5kg → O
-  "22": "M",  // 1.5kg → closest is M (500g) — no exact; use M
-  "23": "P",  // 15kg → P
+  "19": "J",  // 200g → J
+  "20": "M",  // 1kg → M
+  "21": "N",  // 5kg → N
+  "22": "M",  // 1.5kg → M
+  "23": "O",  // 15kg → O
 
-  // Lassi & Chaas (180ml = A)
+  // Lassi & Chaas
   "24": "A",  // 180ml → A
   "25": "A",  // 180ml → A
   "26": "A",  // 180ml → A
@@ -135,37 +136,37 @@ const SIZE_CODE_BY_ID: Record<string, string> = {
   "28": "A",  // 180ml → A
 
   // Paneer
-  "29": "K",  // 200g → K
-  "30": "M",  // 500g → M
-  "31": "N",  // 1kg → N
-  "32": "N",  // 1kg → N
-  "33": "O",  // 5kg → O
+  "29": "J",  // 200g → J
+  "30": "L",  // 500g → L
+  "31": "M",  // 1kg → M
+  "32": "M",  // 1kg → M
+  "33": "N",  // 5kg → N
 
-  // Ghee - Desi
-  "34": "B",  // 20ml → no exact; use B (200ml) or custom - use B
-  "35": "K",  // 200ml JAR → K (200gm equivalent)
-  "36": "C",  // 500ml JAR → C
-  "37": "D",  // 1L → D
-  "38": "E",  // 5L → E
-  "39": "D",  // 1L CEKA → D
-  "40": "K",  // 200ml → K
-  "41": "C",  // 500ml → C
-  "42": "D",  // 1L → D
-  "43": "D",  // 1L CEKA → D
-  "44": "P",  // 15kg TIN → P
-  "45": "H",  // 900ml → H
-  "46": "H",  // 900ml → H
+  // Ghee
+  "34": "B",  // 20ml → B
+  "35": "J",  // 200ml → J
+  "36": "L",  // 500ml → L
+  "37": "M",  // 1L → M
+  "38": "M",  // 1L → M
+  "39": "M",  // 900ml/1L → M
+  "40": "N",  // 5L → N
+  "41": "J",  // 200ml → J
+  "42": "L",  // 500ml → L
+  "43": "M",  // 1L → M
+  "44": "M",  // 900ml → M
+  "45": "M",  // 1L → M
+  "46": "O",  // 15kg → O
 
-  // Rabdi & Shrikhand (80g = Q)
+  // Rabdi & Shrikhand
   "47": "Q",  // 80g → Q
   "48": "Q",  // 80g → Q
   "49": "Q",  // 80g → Q
-  "50": "Q",  // 80g → Q
-  "51": "Q",  // 80g → Q
 
   // Peda & Khowa
-  "52": "K",  // 200g → K
-  "53": "N",  // 1kg → N
+  "50": "J",  // 200g → J
+  "51": "J",  // 200g → J
+  "52": "M",  // 1kg → M
+  "53": "M",  // 1kg → M
 }
 
 const MONTH_LETTERS = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L"]
@@ -193,3 +194,17 @@ export function generateDairyBatchCode(
   // Format: [Plant][Product][Day][Month][Year][Size]
   return `${plantCode}${productCode}${day}${monthLetter}${yearLetter}${sizeCode}`
 }
+
+/**
+ * Compute Expiry Date YYYY-MM-DD from Mfg date and shelf life in days
+ */
+export function computeExpiryDate(mfgDateStr: string, shelfLifeStr: string | number): string {
+  if (!mfgDateStr) return ""
+  const days = typeof shelfLifeStr === "number" ? shelfLifeStr : parseInt(String(shelfLifeStr), 10)
+  if (isNaN(days) || days <= 0) return ""
+  const d = new Date(mfgDateStr)
+  if (isNaN(d.getTime())) return ""
+  d.setDate(d.getDate() + days)
+  return d.toISOString().slice(0, 10)
+}
+
