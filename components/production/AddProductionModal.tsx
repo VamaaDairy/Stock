@@ -204,12 +204,12 @@ export default function AddProductionModal({
     }
   }
 
-  const triggerClassName =
-    mode === "add"
-      ? "h-8 px-3 text-xs font-semibold bg-white text-[#3E5FA0] border border-[#3E5FA0] hover:bg-blue-50 rounded-md transition-colors shadow-xs"
-      : compact
-      ? "h-7 px-2.5 text-[11px] font-semibold bg-white text-[#3E5FA0] border border-blue-200 hover:bg-blue-50 rounded-md transition-colors"
-      : "h-8 px-3 text-xs font-semibold bg-gradient-to-br from-[#4A6FA5] to-[#3E5FA0] text-white border border-transparent hover:brightness-110 rounded-md transition-colors shadow-xs"
+  // Blue gradient for the primary "Add Batch" trigger (main row), same family as Sales.
+  // Compact (per-batch edit row) trigger stays the lighter white/blue-border style so it
+  // doesn't visually compete with the primary Add Batch button.
+  const triggerClassName = compact
+    ? "h-7 px-2.5 text-[11px] font-semibold bg-white text-[#3E5FA0] border border-blue-200 hover:bg-blue-50 rounded-md transition-colors"
+    : "h-8 px-3 text-xs font-semibold bg-gradient-to-br from-[#4A6FA5] to-[#3E5FA0] text-white border border-transparent hover:brightness-110 rounded-md transition-colors shadow-xs"
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>

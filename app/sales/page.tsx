@@ -222,8 +222,9 @@ export default function SalesPage() {
                             <span className="text-neutral-400 font-normal">0 {p.unit}</span>
                           )}
                         </td>
+                        {/* Only "Add Batch" here — editing individual batches happens in the dropdown below */}
                         <td className="py-3 px-4 text-center" onClick={e => e.stopPropagation()}>
-                          <AddSalesModal product={p} date={period.date} onSaved={fetchData} />
+                          <AddSalesModal product={p} date={period.date} onSaved={fetchData} mode="add" />
                         </td>
                       </tr>
 
@@ -241,6 +242,7 @@ export default function SalesPage() {
                                       <th className="py-2.5 px-3">UBD</th>
                                       <th className="py-2.5 px-3 text-center">UBD %</th>
                                       <th className="py-2.5 px-3 text-right font-black text-slate-800">Sale Out Quantity</th>
+                                      <th className="py-2.5 px-3 text-center">Action</th>
                                     </tr>
                                   </thead>
                                   <tbody className="divide-y divide-blue-100">
@@ -276,12 +278,22 @@ export default function SalesPage() {
                                                 )}
                                               </div>
                                             </td>
+                                            <td className="py-2 px-3 text-center" onClick={e => e.stopPropagation()}>
+                                              <AddSalesModal
+                                                product={p}
+                                                date={period.date}
+                                                onSaved={fetchData}
+                                                mode="edit"
+                                                editBatch={b}
+                                                compact
+                                              />
+                                            </td>
                                           </tr>
                                         )
                                       })
                                     ) : (
                                       <tr>
-                                        <td colSpan={5} className="py-3 px-4 text-center text-slate-400 font-medium">
+                                        <td colSpan={6} className="py-3 px-4 text-center text-slate-400 font-medium">
                                           No sales dispatch entry recorded for date {currentDateLabel}.
                                         </td>
                                       </tr>
