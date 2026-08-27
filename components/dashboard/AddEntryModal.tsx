@@ -180,43 +180,43 @@ export default function AddEntryModal({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger className="h-9 px-4 text-sm font-semibold bg-white text-black border border-neutral-300 hover:bg-neutral-100 rounded-lg transition-colors shadow-xs">
+      <DialogTrigger className="h-9 px-4 text-sm font-semibold bg-gradient-to-br from-[#4A6FA5] to-[#3E5FA0] text-white border border-transparent hover:brightness-110 rounded-lg transition-colors shadow-xs">
         {product.hasEntry ? "Edit entry" : "Add entry"}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto bg-white text-black border-neutral-200">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto bg-white text-slate-800 border-blue-100">
         <DialogHeader>
-          <DialogTitle className="text-xl font-black flex items-center justify-between text-black">
+          <DialogTitle className="text-xl font-black flex items-center justify-between text-slate-800">
             <span>{product.name}</span>
           </DialogTitle>
-          <DialogDescription className="text-sm font-bold text-neutral-700 flex items-center justify-between flex-wrap gap-2">
+          <DialogDescription className="text-sm font-bold text-slate-600 flex items-center justify-between flex-wrap gap-2">
             <span>Date: {date} · Tally Unit: {product.unit}</span>
             {pcsPerCrt > 1 && (
-              <Badge variant="outline" className="border-neutral-300 text-black font-mono text-xs">
+              <Badge variant="outline" className="border-blue-200 bg-blue-50/60 text-[#2B4C86] font-mono text-xs">
                 Pack Config: 1 {product.unit} = {pcsPerCrt} Pcs
               </Badge>
             )}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-2 text-black">
+        <div className="space-y-4 py-2 text-slate-800">
           {/* SKU Code & Batch Metadata */}
-          <div className="bg-neutral-50 p-3.5 rounded-lg border border-neutral-200 space-y-3">
-            <h4 className="text-xs font-black uppercase tracking-wider text-black">Product Code & Batch Details</h4>
+          <div className="bg-slate-50 p-3.5 rounded-lg border border-blue-100 space-y-3">
+            <h4 className="text-xs font-black uppercase tracking-wider text-slate-800">Product Code & Batch Details</h4>
             
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label className="text-xs font-bold text-black">Product Code (SKU Code)</Label>
+                <Label className="text-xs font-bold text-slate-800">Product Code (SKU Code)</Label>
                 <Input
-                  className="h-10 text-sm mt-1 font-mono font-bold border-neutral-300 bg-white text-black"
+                  className="h-10 text-sm mt-1 font-mono font-bold border-blue-200 bg-white text-slate-800"
                   value={skuCode}
                   onChange={e => setSkuCode(e.target.value)}
                   placeholder="e.g. 1011"
                 />
               </div>
               <div>
-                <Label className="text-xs font-bold text-black">Batch Number / Code</Label>
+                <Label className="text-xs font-bold text-slate-800">Batch Number / Code</Label>
                 <Input
-                  className="h-10 text-sm mt-1 border-neutral-300 bg-white text-black font-semibold"
+                  className="h-10 text-sm mt-1 border-blue-200 bg-white text-slate-800 font-semibold"
                   value={batchNumber}
                   onChange={e => setBatchNumber(e.target.value)}
                   placeholder="e.g. AI08HU"
@@ -226,19 +226,19 @@ export default function AddEntryModal({
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label className="text-xs font-bold text-black">Manufacturing Date</Label>
+                <Label className="text-xs font-bold text-slate-800">Manufacturing Date</Label>
                 <Input
                   type="date"
-                  className="h-10 text-sm mt-1 border-neutral-300 bg-white text-black font-semibold"
+                  className="h-10 text-sm mt-1 border-blue-200 bg-white text-slate-800 font-semibold"
                   value={mfgDate}
                   onChange={e => handleMfgDateChange(e.target.value)}
                 />
               </div>
               <div>
-                <Label className="text-xs font-bold text-black">Shelf Life (Days)</Label>
+                <Label className="text-xs font-bold text-slate-800">Shelf Life (Days)</Label>
                 <Input
                   type="number"
-                  className="h-10 text-sm mt-1 border-neutral-300 bg-white text-black font-semibold"
+                  className="h-10 text-sm mt-1 border-blue-200 bg-white text-slate-800 font-semibold"
                   value={shelfLifeDays}
                   onChange={e => handleShelfLifeChange(e.target.value)}
                   placeholder="e.g. 17"
@@ -248,19 +248,19 @@ export default function AddEntryModal({
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label className="text-xs font-bold text-black">UBD (Use Before Date)</Label>
+                <Label className="text-xs font-bold text-slate-800">UBD (Use Before Date)</Label>
                 <Input
                   type="date"
-                  className="h-10 text-sm mt-1 border-neutral-300 bg-white text-black font-semibold"
+                  className="h-10 text-sm mt-1 border-blue-200 bg-white text-slate-800 font-semibold"
                   value={ubdDate}
                   onChange={e => setUbdDate(e.target.value)}
                 />
               </div>
               <div>
-                <Label className="text-xs font-bold text-black">Expiry Date</Label>
+                <Label className="text-xs font-bold text-slate-800">Expiry Date</Label>
                 <Input
                   type="date"
-                  className="h-10 text-sm mt-1 border-neutral-300 bg-white text-black font-semibold"
+                  className="h-10 text-sm mt-1 border-blue-200 bg-white text-slate-800 font-semibold"
                   value={expiryDate}
                   onChange={e => handleExpiryDateChange(e.target.value)}
                 />
@@ -271,27 +271,27 @@ export default function AddEntryModal({
           {/* Production Section */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <Label className="text-sm font-black text-black uppercase tracking-wider">
+              <Label className="text-sm font-black text-slate-800 uppercase tracking-wider">
                 Daily Production
               </Label>
               {pcsPerCrt > 1 && (
-                <span className="text-xs font-bold text-black bg-neutral-100 px-2 py-0.5 rounded border border-neutral-300">
+                <span className="text-xs font-bold text-slate-800 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
                   {formatMixedUnit(parseFloat(prodTotal) || 0, pcsPerCrt, product.unit || "CRT", "PCS")}
                 </span>
               )}
             </div>
             <div className="grid grid-cols-3 gap-2">
               <div>
-                <Input className="h-11 text-base border-neutral-300 text-black font-semibold" placeholder={product.unit} value={prodCrt} onChange={e => handleProdCrtChange(e.target.value)} />
-                <p className="text-[11px] font-medium text-neutral-600 text-center mt-0.5">{product.unit}</p>
+                <Input className="h-11 text-base border-blue-200 text-slate-800 font-semibold" placeholder={product.unit} value={prodCrt} onChange={e => handleProdCrtChange(e.target.value)} />
+                <p className="text-[11px] font-medium text-slate-500 text-center mt-0.5">{product.unit}</p>
               </div>
               <div>
-                <Input className="h-11 text-base border-neutral-300 text-black font-semibold" placeholder="Pc" value={prodPc} onChange={e => handleProdPcChange(e.target.value)} />
-                <p className="text-[11px] font-medium text-neutral-600 text-center mt-0.5">Pc</p>
+                <Input className="h-11 text-base border-blue-200 text-slate-800 font-semibold" placeholder="Pc" value={prodPc} onChange={e => handleProdPcChange(e.target.value)} />
+                <p className="text-[11px] font-medium text-slate-500 text-center mt-0.5">Pc</p>
               </div>
               <div>
-                <Input className="h-11 text-base font-bold border-neutral-300 text-black" placeholder="Total" value={prodTotal} onChange={e => setProdTotal(e.target.value)} />
-                <p className="text-[11px] font-medium text-neutral-600 text-center mt-0.5">Total ({product.unit})</p>
+                <Input className="h-11 text-base font-bold border-blue-200 text-slate-800" placeholder="Total" value={prodTotal} onChange={e => setProdTotal(e.target.value)} />
+                <p className="text-[11px] font-medium text-slate-500 text-center mt-0.5">Total ({product.unit})</p>
               </div>
             </div>
           </div>
@@ -299,27 +299,27 @@ export default function AddEntryModal({
           {/* Demand Section */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <Label className="text-sm font-black text-black uppercase tracking-wider">
+              <Label className="text-sm font-black text-slate-800 uppercase tracking-wider">
                 Daily Demand (Orders Received)
               </Label>
               {pcsPerCrt > 1 && (
-                <span className="text-xs font-bold text-black bg-neutral-100 px-2 py-0.5 rounded border border-neutral-300">
+                <span className="text-xs font-bold text-slate-800 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
                   {formatMixedUnit(parseFloat(demTotal) || 0, pcsPerCrt, product.unit || "CRT", "PCS")}
                 </span>
               )}
             </div>
             <div className="grid grid-cols-3 gap-2">
               <div>
-                <Input className="h-11 text-base border-neutral-300 text-black font-semibold" placeholder={product.unit} value={demCrt} onChange={e => handleDemCrtChange(e.target.value)} />
-                <p className="text-[11px] font-medium text-neutral-600 text-center mt-0.5">{product.unit}</p>
+                <Input className="h-11 text-base border-blue-200 text-slate-800 font-semibold" placeholder={product.unit} value={demCrt} onChange={e => handleDemCrtChange(e.target.value)} />
+                <p className="text-[11px] font-medium text-slate-500 text-center mt-0.5">{product.unit}</p>
               </div>
               <div>
-                <Input className="h-11 text-base border-neutral-300 text-black font-semibold" placeholder="Pc" value={demPc} onChange={e => handleDemPcChange(e.target.value)} />
-                <p className="text-[11px] font-medium text-neutral-600 text-center mt-0.5">Pc</p>
+                <Input className="h-11 text-base border-blue-200 text-slate-800 font-semibold" placeholder="Pc" value={demPc} onChange={e => handleDemPcChange(e.target.value)} />
+                <p className="text-[11px] font-medium text-slate-500 text-center mt-0.5">Pc</p>
               </div>
               <div>
-                <Input className="h-11 text-base font-bold border-neutral-300 text-black" placeholder="Total" value={demTotal} onChange={e => setDemTotal(e.target.value)} />
-                <p className="text-[11px] font-medium text-neutral-600 text-center mt-0.5">Total ({product.unit})</p>
+                <Input className="h-11 text-base font-bold border-blue-200 text-slate-800" placeholder="Total" value={demTotal} onChange={e => setDemTotal(e.target.value)} />
+                <p className="text-[11px] font-medium text-slate-500 text-center mt-0.5">Total ({product.unit})</p>
               </div>
             </div>
           </div>
@@ -327,27 +327,27 @@ export default function AddEntryModal({
           {/* Sale Section (Reduces Stock) */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <Label className="text-sm font-black text-black uppercase tracking-wider">
+              <Label className="text-sm font-black text-slate-800 uppercase tracking-wider">
                 Daily Sale (Actual Dispatches)
               </Label>
               {pcsPerCrt > 1 && (
-                <span className="text-xs font-bold text-black bg-neutral-100 px-2 py-0.5 rounded border border-neutral-300">
+                <span className="text-xs font-bold text-slate-800 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
                   {formatMixedUnit(parseFloat(saleTotal) || 0, pcsPerCrt, product.unit || "CRT", "PCS")}
                 </span>
               )}
             </div>
             <div className="grid grid-cols-3 gap-2">
               <div>
-                <Input className="h-11 text-base border-neutral-300 text-black font-semibold" placeholder={product.unit} value={saleCrt} onChange={e => handleSaleCrtChange(e.target.value)} />
-                <p className="text-[11px] font-medium text-neutral-600 text-center mt-0.5">{product.unit}</p>
+                <Input className="h-11 text-base border-blue-200 text-slate-800 font-semibold" placeholder={product.unit} value={saleCrt} onChange={e => handleSaleCrtChange(e.target.value)} />
+                <p className="text-[11px] font-medium text-slate-500 text-center mt-0.5">{product.unit}</p>
               </div>
               <div>
-                <Input className="h-11 text-base border-neutral-300 text-black font-semibold" placeholder="Pc" value={salePc} onChange={e => handleSalePcChange(e.target.value)} />
-                <p className="text-[11px] font-medium text-neutral-600 text-center mt-0.5">Pc</p>
+                <Input className="h-11 text-base border-blue-200 text-slate-800 font-semibold" placeholder="Pc" value={salePc} onChange={e => handleSalePcChange(e.target.value)} />
+                <p className="text-[11px] font-medium text-slate-500 text-center mt-0.5">Pc</p>
               </div>
               <div>
-                <Input className="h-11 text-base font-bold border-neutral-300 text-black" placeholder="Total" value={saleTotal} onChange={e => setSaleTotal(e.target.value)} />
-                <p className="text-[11px] font-medium text-neutral-600 text-center mt-0.5">Total ({product.unit})</p>
+                <Input className="h-11 text-base font-bold border-blue-200 text-slate-800" placeholder="Total" value={saleTotal} onChange={e => setSaleTotal(e.target.value)} />
+                <p className="text-[11px] font-medium text-slate-500 text-center mt-0.5">Total ({product.unit})</p>
               </div>
             </div>
           </div>
@@ -358,7 +358,7 @@ export default function AddEntryModal({
         <DialogFooter className="pt-2">
           <Button
             size="lg"
-            className="w-full text-base font-bold bg-white text-black border border-neutral-300 hover:bg-neutral-100 rounded-lg shadow-xs"
+            className="w-full text-base font-bold bg-gradient-to-br from-[#4A6FA5] to-[#3E5FA0] text-white border border-transparent hover:brightness-110 rounded-lg shadow-xs"
             onClick={handleSubmit}
             disabled={saving}
           >

@@ -97,8 +97,8 @@ export default function ProductFormModal({
       <DialogTrigger
         className={
           isEditing
-            ? "h-8 text-xs font-semibold bg-white text-black border border-neutral-300 hover:bg-neutral-100 px-3 rounded-md flex items-center gap-1 transition-colors shadow-xs"
-            : "h-10 px-4 font-bold bg-white text-black border border-neutral-300 hover:bg-neutral-100 rounded-md flex items-center gap-2 transition-colors shadow-xs"
+            ? "h-8 text-xs font-semibold bg-gradient-to-br from-[#4A6FA5] to-[#3E5FA0] text-white border border-transparent hover:brightness-110 px-3 rounded-md flex items-center gap-1 transition-colors shadow-xs"
+            : "h-10 px-4 font-bold bg-gradient-to-br from-[#4A6FA5] to-[#3E5FA0] text-white border border-transparent hover:brightness-110 rounded-md flex items-center gap-2 transition-colors shadow-xs"
         }
       >
         {isEditing ? (
@@ -112,19 +112,19 @@ export default function ProductFormModal({
         )}
       </DialogTrigger>
 
-      <DialogContent className="sm:max-w-md bg-white text-black border-neutral-200">
+      <DialogContent className="sm:max-w-md bg-white text-slate-800 border-blue-100">
         <DialogHeader>
-          <DialogTitle className="text-xl font-black text-black">
+          <DialogTitle className="text-xl font-black text-slate-800">
             {isEditing ? `Edit Product: ${product?.name}` : "Add New Product"}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 py-2 text-black">
+        <div className="space-y-4 py-2 text-slate-800">
           {/* Product Name */}
           <div>
-            <Label className="text-xs font-bold text-black">Product Name *</Label>
+            <Label className="text-xs font-bold text-slate-800">Product Name *</Label>
             <Input
-              className="h-10 text-sm mt-1 border-neutral-300 bg-white text-black font-semibold"
+              className="h-10 text-sm mt-1 border-blue-200 bg-white text-slate-800 font-semibold"
               value={name}
               onChange={e => setName(e.target.value)}
               placeholder="e.g. Gaia Toned Milk 500 ml"
@@ -134,9 +134,9 @@ export default function ProductFormModal({
           {/* SKU Code & Category */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label className="text-xs font-bold text-black">SKU Code *</Label>
+              <Label className="text-xs font-bold text-slate-800">SKU Code *</Label>
               <Input
-                className="h-10 text-sm mt-1 border-neutral-300 bg-white text-black font-mono font-bold"
+                className="h-10 text-sm mt-1 border-blue-200 bg-white text-slate-800 font-mono font-bold"
                 value={skuCode}
                 onChange={e => setSkuCode(e.target.value)}
                 placeholder="e.g. 1003"
@@ -144,9 +144,9 @@ export default function ProductFormModal({
             </div>
 
             <div>
-              <Label className="text-xs font-bold text-black">Category *</Label>
+              <Label className="text-xs font-bold text-slate-800">Category *</Label>
               <select
-                className="h-10 text-sm mt-1 w-full border border-neutral-300 rounded-md px-3 bg-white text-black font-semibold"
+                className="h-10 text-sm mt-1 w-full border border-blue-200 rounded-md px-3 bg-white text-slate-800 font-semibold"
                 value={category}
                 onChange={e => setCategory(e.target.value)}
               >
@@ -162,9 +162,9 @@ export default function ProductFormModal({
           {/* Unit & Pack Size Factor */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label className="text-xs font-bold text-black">Tally Unit *</Label>
+              <Label className="text-xs font-bold text-slate-800">Tally Unit *</Label>
               <select
-                className="h-10 text-sm mt-1 w-full border border-neutral-300 rounded-md px-3 bg-white text-black font-bold"
+                className="h-10 text-sm mt-1 w-full border border-blue-200 rounded-md px-3 bg-white text-slate-800 font-bold"
                 value={unit}
                 onChange={e => {
                   setUnit(e.target.value)
@@ -181,10 +181,10 @@ export default function ProductFormModal({
             </div>
 
             <div>
-              <Label className="text-xs font-bold text-black">Pcs per Crt/Box *</Label>
+              <Label className="text-xs font-bold text-slate-800">Pcs per Crt/Box *</Label>
               <Input
                 type="number"
-                className="h-10 text-sm mt-1 border-neutral-300 bg-white text-black font-bold"
+                className="h-10 text-sm mt-1 border-blue-200 bg-white text-slate-800 font-bold"
                 value={pcsPerCrt}
                 onChange={e => setPcsPerCrt(e.target.value)}
                 placeholder="e.g. 60 or 1"
@@ -194,10 +194,10 @@ export default function ProductFormModal({
 
           {/* Default Shelf Life */}
           <div>
-            <Label className="text-xs font-bold text-black">Default Shelf Life (Days)</Label>
+            <Label className="text-xs font-bold text-slate-800">Default Shelf Life (Days)</Label>
             <Input
               type="number"
-              className="h-10 text-sm mt-1 border-neutral-300 bg-white text-black font-semibold"
+              className="h-10 text-sm mt-1 border-blue-200 bg-white text-slate-800 font-semibold"
               value={shelfLifeDays}
               onChange={e => setShelfLifeDays(e.target.value)}
               placeholder="e.g. 15 or 90"
@@ -210,7 +210,7 @@ export default function ProductFormModal({
         <DialogFooter>
           <Button
             size="lg"
-            className="w-full text-base font-bold bg-white text-black border border-neutral-300 hover:bg-neutral-100 rounded-lg shadow-xs"
+            className="w-full text-base font-bold bg-gradient-to-br from-[#4A6FA5] to-[#3E5FA0] text-white border border-transparent hover:brightness-110 rounded-lg shadow-xs"
             onClick={handleSubmit}
             disabled={saving}
           >

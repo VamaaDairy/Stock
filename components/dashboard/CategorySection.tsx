@@ -19,18 +19,18 @@ export default function CategorySection({
   const categoryUnit = group.products[0]?.unit || "unit"
 
   return (
-    <AccordionItem value={group.category} className="border border-neutral-200 rounded-xl px-5 bg-white text-black shadow-xs">
-      <AccordionTrigger className="text-xl font-bold hover:no-underline py-4 text-black">
+    <AccordionItem value={group.category} className="border border-blue-100 rounded-xl px-5 bg-white text-slate-800 shadow-xs">
+      <AccordionTrigger className="text-xl font-bold hover:no-underline py-4 text-slate-800">
         <div className="flex items-center justify-between w-full pr-4 flex-wrap gap-2">
           <div className="flex items-center gap-3">
-            <span className="text-black font-black">{group.category}</span>
-            <Badge variant="outline" className="text-xs font-bold border-neutral-300 text-black">
+            <span className="text-slate-800 font-black">{group.category}</span>
+            <Badge variant="outline" className="text-xs font-bold border-blue-200 text-slate-800">
               {entriesCount}/{group.products.length} entered
             </Badge>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-neutral-500">Category Stock:</span>
-            <span className="text-sm font-black text-black bg-neutral-100 px-2.5 py-1 rounded-md border border-neutral-300">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Category Stock:</span>
+            <span className="text-sm font-black text-slate-800 bg-blue-50 px-2.5 py-1 rounded-md border border-blue-200">
               {categoryStock.toLocaleString()} {categoryUnit}
             </span>
           </div>

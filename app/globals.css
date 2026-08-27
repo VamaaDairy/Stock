@@ -3,7 +3,6 @@
 @import "shadcn/tailwind.css";
 
 @custom-variant dark (&:is(.dark *));
-
 @theme inline {
   --font-heading: var(--font-sans);
   --font-sans: var(--font-sans);
@@ -47,40 +46,57 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/*
+  Gaia theme tokens.
+  Primary  = Gaia blue  (~#3E5FA0 / #4A6FA5, from the login logo + button)
+  Accent   = Gaia green (~#3E9B4F, from the "nourishment for life" tagline)
+  Neutrals = slate-tinted instead of pure black/white, to match the
+             soft blue-gray backgrounds used across the app shell.
+*/
 :root {
   --background: oklch(1 0 0);
-  --foreground: oklch(0 0 0);
+  --foreground: oklch(0.279 0.041 260.031);        /* slate-800 */
+
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0 0 0);
+  --card-foreground: oklch(0.279 0.041 260.031);
+
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0 0 0);
-  --primary: oklch(0 0 0);
+  --popover-foreground: oklch(0.279 0.041 260.031);
+
+  --primary: oklch(0.424 0.199 265.638);            /* Gaia blue */
   --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(1 0 0);
-  --secondary-foreground: oklch(0 0 0);
-  --muted: oklch(1 0 0);
-  --muted-foreground: oklch(0 0 0);
-  --accent: oklch(1 0 0);
-  --accent-foreground: oklch(0 0 0);
+
+  --secondary: oklch(0.97 0.014 254.604);           /* soft blue-50 */
+  --secondary-foreground: oklch(0.379 0.146 265.522);
+
+  --muted: oklch(0.984 0.003 247.858);              /* slate-50 */
+  --muted-foreground: oklch(0.554 0.046 257.417);   /* slate-500 */
+
+  --accent: oklch(0.982 0.018 155.826);             /* green-50 */
+  --accent-foreground: oklch(0.527 0.154 150.069);  /* Gaia green ~#3E9B4F */
+
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0 0 0);
-  --input: oklch(0 0 0);
-  --ring: oklch(0 0 0);
-  --chart-1: oklch(0 0 0);
-  --chart-2: oklch(0 0 0);
-  --chart-3: oklch(0 0 0);
-  --chart-4: oklch(0 0 0);
-  --chart-5: oklch(0 0 0);
+
+  --border: oklch(0.929 0.013 255.508);             /* slate-200 */
+  --input: oklch(0.929 0.013 255.508);
+  --ring: oklch(0.623 0.214 259.815);               /* blue-500 focus ring */
+
+  --chart-1: oklch(0.424 0.199 265.638);
+  --chart-2: oklch(0.527 0.154 150.069);
+  --chart-3: oklch(0.554 0.046 257.417);
+  --chart-4: oklch(0.704 0.04 256.788);
+  --chart-5: oklch(0.379 0.146 265.522);
+
   --radius: 0.625rem;
 
   --sidebar: oklch(1 0 0);
-  --sidebar-foreground: oklch(0 0 0);
-  --sidebar-primary: oklch(0 0 0);
+  --sidebar-foreground: oklch(0.279 0.041 260.031);
+  --sidebar-primary: oklch(0.424 0.199 265.638);
   --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: oklch(1 0 0);
-  --sidebar-accent-foreground: oklch(0 0 0);
-  --sidebar-border: oklch(0 0 0);
-  --sidebar-ring: oklch(0 0 0);
+  --sidebar-accent: oklch(0.97 0.014 254.604);
+  --sidebar-accent-foreground: oklch(0.379 0.146 265.522);
+  --sidebar-border: oklch(0.929 0.013 255.508);
+  --sidebar-ring: oklch(0.623 0.214 259.815);
 }
 
 @layer base {
@@ -98,11 +114,9 @@
 [data-sidebar="menu-button"] {
   font-size: 0.95rem;
 }
-
 [data-sidebar="menu-button"] span {
   font-size: 0.95rem;
 }
-
 [data-sidebar="group-label"] {
   font-size: 0.8rem;
 }

@@ -23,9 +23,9 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-white p-6">
-      <div className="max-w-md mx-auto space-y-4 border border-neutral-200 rounded-xl p-6">
-        <h1 className="text-2xl font-black text-black">Profile</h1>
-        <p className="text-neutral-600">Email: <span className="font-bold text-black">{email}</span></p>
+      <div className="max-w-md mx-auto space-y-4 border border-blue-100 rounded-xl p-6">
+        <h1 className="text-2xl font-black text-slate-800">Profile</h1>
+        <p className="text-slate-500">Email: <span className="font-bold text-slate-800">{email}</span></p>
         <Button onClick={handleLogout} variant="outline">Logout</Button>
       </div>
     </div>

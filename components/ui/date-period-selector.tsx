@@ -61,22 +61,22 @@ export default function DatePeriodSelector({
   }
 
   return (
-    <div className="bg-white p-3 rounded-xl border border-neutral-200 text-black shadow-xs flex items-center gap-4 flex-wrap">
+    <div className="bg-white p-3 rounded-xl border border-blue-100 text-slate-800 shadow-xs flex items-center gap-4 flex-wrap">
       <div className="flex items-center gap-2">
-        <Label className="text-xs font-black text-neutral-700 uppercase tracking-wider">From:</Label>
+        <Label className="text-xs font-black text-slate-600 uppercase tracking-wider">From:</Label>
         <Input
           type="date"
-          className="h-10 text-sm w-40 font-bold border-neutral-300 text-black bg-white focus:ring-1 focus:ring-black"
+          className="h-10 text-sm w-40 font-bold border-blue-200 text-slate-800 bg-white focus:ring-1 focus:ring-black"
           value={fromVal}
           onChange={e => handleFromChange(e.target.value)}
         />
       </div>
 
       <div className="flex items-center gap-2">
-        <Label className="text-xs font-black text-neutral-700 uppercase tracking-wider">To:</Label>
+        <Label className="text-xs font-black text-slate-600 uppercase tracking-wider">To:</Label>
         <Input
           type="date"
-          className="h-10 text-sm w-40 font-bold border-neutral-300 text-black bg-white focus:ring-1 focus:ring-black"
+          className="h-10 text-sm w-40 font-bold border-blue-200 text-slate-800 bg-white focus:ring-1 focus:ring-black"
           value={toVal}
           onChange={e => handleToChange(e.target.value)}
         />

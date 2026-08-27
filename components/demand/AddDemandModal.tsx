@@ -110,36 +110,36 @@ export default function AddDemandModal({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger className="h-8 px-3 text-xs font-semibold bg-white text-black border border-neutral-300 hover:bg-neutral-100 rounded-md transition-colors shadow-xs">
+      <DialogTrigger className="h-8 px-3 text-xs font-semibold bg-gradient-to-br from-[#4A6FA5] to-[#3E5FA0] text-white border border-transparent hover:brightness-110 rounded-md transition-colors shadow-xs">
         {product.demand.total > 0 ? "Edit Demand" : "Add Demand"}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md bg-white text-black border-neutral-200">
+      <DialogContent className="sm:max-w-md bg-white text-slate-800 border-blue-100">
         <DialogHeader>
-          <DialogTitle className="text-xl font-black text-black">
+          <DialogTitle className="text-xl font-black text-slate-800">
             Demand Entry: {product.name}
           </DialogTitle>
-          <DialogDescription className="text-xs font-bold text-neutral-700 flex items-center justify-between flex-wrap gap-2">
+          <DialogDescription className="text-xs font-bold text-slate-600 flex items-center justify-between flex-wrap gap-2">
             <span>Date: {date} · Tally Unit: {product.unit}</span>
             {pcsPerCrt > 1 && (
-              <Badge variant="outline" className="border-neutral-300 text-black font-mono text-[10px]">
+              <Badge variant="outline" className="border-blue-200 bg-blue-50/60 text-[#2B4C86] font-mono text-[10px]">
                 1 {product.unit} = {pcsPerCrt} Pcs
               </Badge>
             )}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-2 text-black">
+        <div className="space-y-4 py-2 text-slate-800">
           {/* Smallest Unit Entry with Auto-Conversion */}
-          <div className="space-y-2 bg-neutral-50 p-3 rounded-xl border border-neutral-200">
-            <Label className="text-xs font-black text-black uppercase tracking-wider block">
+          <div className="space-y-2 bg-slate-50 p-3 rounded-xl border border-blue-100">
+            <Label className="text-xs font-black text-slate-800 uppercase tracking-wider block">
               Enter Demand Quantity (Smallest Unit: Pcs)
             </Label>
             
             <div className="space-y-1.5">
-              <Label className="text-[11px] font-bold text-neutral-700">Demand Quantity in Pieces (Pcs)</Label>
+              <Label className="text-[11px] font-bold text-slate-600">Demand Quantity in Pieces (Pcs)</Label>
               <Input
                 type="number"
-                className="h-11 text-lg font-bold border border-neutral-300 text-black bg-white"
+                className="h-11 text-lg font-bold border border-blue-200 text-slate-800 bg-white"
                 placeholder="Enter Pcs (e.g. 50)"
                 value={demPc}
                 onChange={e => handlePcsChange(e.target.value)}
@@ -148,25 +148,25 @@ export default function AddDemandModal({
 
             {/* Live Mixed Unit Result Card */}
             {pcsPerCrt > 1 && (
-              <div className="bg-white p-3 rounded-lg border border-neutral-300 mt-2 space-y-1">
+              <div className="bg-white p-3 rounded-lg border border-blue-200 mt-2 space-y-1">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-neutral-600">Mixed Unit Breakdown:</span>
-                  <span className="text-sm font-extrabold text-black font-mono bg-neutral-100 px-2 py-0.5 rounded border border-neutral-200">
+                  <span className="text-xs font-bold text-slate-500">Mixed Unit Breakdown:</span>
+                  <span className="text-sm font-extrabold text-slate-800 font-mono bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
                     {formatMixedUnit(parseFloat(demPc) || 0, pcsPerCrt, product.unit || "CRT", "PCS")}
                   </span>
                 </div>
-                <div className="text-[11px] text-neutral-500 font-medium">
+                <div className="text-[11px] text-slate-400 font-medium">
                   {pcsPerCrt} pcs per crate · Crt: {demCrt} · Loose Pcs: {(parseFloat(demPc) || 0) % pcsPerCrt}
                 </div>
               </div>
             )}
           </div>
 
-          <div className="bg-neutral-50 p-3 rounded-lg border border-neutral-200 text-xs space-y-1">
-            <p className="font-bold text-black">Live Stock Context:</p>
-            <p className="text-neutral-600 font-semibold">
-              Current Available Stock: <span className="font-bold text-black">{formatMixedUnit(product.currentStockTotal ?? product.currentStock, pcsPerCrt, product.unit || "CRT", "PCS")}</span>
-              {pcsPerCrt > 1 && <span className="text-neutral-500 ml-1">({(product.currentStockTotal ?? product.currentStock ?? 0).toLocaleString()} PCS)</span>}
+          <div className="bg-slate-50 p-3 rounded-lg border border-blue-100 text-xs space-y-1">
+            <p className="font-bold text-slate-800">Live Stock Context:</p>
+            <p className="text-slate-500 font-semibold">
+              Current Available Stock: <span className="font-bold text-slate-800">{formatMixedUnit(product.currentStockTotal ?? product.currentStock, pcsPerCrt, product.unit || "CRT", "PCS")}</span>
+              {pcsPerCrt > 1 && <span className="text-slate-400 ml-1">({(product.currentStockTotal ?? product.currentStock ?? 0).toLocaleString()} PCS)</span>}
             </p>
           </div>
 
@@ -176,7 +176,7 @@ export default function AddDemandModal({
         <DialogFooter>
           <Button
             size="lg"
-            className="w-full text-base font-bold bg-white text-black border border-neutral-300 hover:bg-neutral-100 rounded-lg shadow-xs"
+            className="w-full text-base font-bold bg-gradient-to-br from-[#4A6FA5] to-[#3E5FA0] text-white border border-transparent hover:brightness-110 rounded-lg shadow-xs"
             onClick={handleSubmit}
             disabled={saving}
           >

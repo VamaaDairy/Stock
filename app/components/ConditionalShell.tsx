@@ -10,13 +10,13 @@ export default function ConditionalShell({ children }: { children: React.ReactNo
   const isPublic = PUBLIC_ROUTES.some(r => pathname.startsWith(r))
 
   if (isPublic) {
-    return <main className="flex-1 bg-white text-black min-h-screen">{children}</main>
+    return <main className="flex-1 bg-white text-slate-800 min-h-screen">{children}</main>
   }
 
   return (
     <SidebarProvider>
       <AppSidebar />
-      <main className="flex-1 bg-white text-black">
+      <main className="flex-1 bg-white text-slate-800">
         <SidebarTrigger />
         {children}
       </main>
