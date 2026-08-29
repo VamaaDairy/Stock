@@ -263,21 +263,46 @@ export async function upsertEntry(input: EntryInput) {
     args: [batchId],
   })
 
-  const prodCrt = Number(production?.crt || 0)
-  const prodPc = Number(production?.pc || 0)
-  const prodTotal = Number(production?.total || (prodCrt * pcsPerCrt + prodPc))
+  const normalizeQty = (raw?: { crt?: number; pc?: number; total?: number; unit?: string }) => {
+    let crt = Number(raw?.crt || 0)
+    let pc = Number(raw?.pc || 0)
+    let total = Number(raw?.total || 0)
+    const blockUnit = (raw?.unit || productUnit).toUpperCase().trim()
 
-  const demCrt = Number(demand?.crt || 0)
-  const demPc = Number(demand?.pc || 0)
-  const demTotal = Number(demand?.total || (demCrt * pcsPerCrt + demPc))
+    if (pcsPerCrt > 1 && (blockUnit === "CRT" || blockUnit === "CBX")) {
+      // Case 1: Crates have decimal fraction from Day Book (e.g. 0.125 or 3.333333)
+      if (crt > 0 && (crt % 1 !== 0 || (total === crt && pc === 0))) {
+        const totalPcs = Math.round(crt * pcsPerCrt)
+        crt = Math.floor(totalPcs / pcsPerCrt)
+        pc = totalPcs % pcsPerCrt
+        total = totalPcs
+      } else if (total > 0 && total % 1 !== 0) {
+        const totalPcs = Math.round(total * pcsPerCrt)
+        crt = Math.floor(totalPcs / pcsPerCrt)
+        pc = totalPcs % pcsPerCrt
+        total = totalPcs
+      } else if (total > 0 && crt === 0 && pc === 0) {
+        const roundedTotal = Math.round(total)
+        crt = Math.floor(roundedTotal / pcsPerCrt)
+        pc = roundedTotal % pcsPerCrt
+        total = roundedTotal
+      } else {
+        total = Math.round(crt * pcsPerCrt + pc)
+        crt = Math.floor(total / pcsPerCrt)
+        pc = total % pcsPerCrt
+      }
+    } else {
+      if (total === 0 && crt > 0) total = crt
+      if (crt === 0 && total > 0) crt = total
+    }
 
-  const saleCrt = Number(sale?.crt || 0)
-  const salePc = Number(sale?.pc || 0)
-  const saleTotal = Number(sale?.total || (saleCrt * pcsPerCrt + salePc))
+    return { crt, pc, total }
+  }
 
-  const retCrt = Number(salesReturn?.crt || 0)
-  const retPc = Number(salesReturn?.pc || 0)
-  const retTotal = Number(salesReturn?.total || (retCrt * pcsPerCrt + retPc))
+  const { crt: prodCrt, pc: prodPc, total: prodTotal } = normalizeQty(production)
+  const { crt: demCrt, pc: demPc, total: demTotal } = normalizeQty(demand)
+  const { crt: saleCrt, pc: salePc, total: saleTotal } = normalizeQty(sale)
+  const { crt: retCrt, pc: retPc, total: retTotal } = normalizeQty(salesReturn)
 
   if (existingMetrics.rows.length > 0) {
     await turso.execute({
@@ -359,18 +384,35 @@ export async function recordSaleEntry(input: {
   let saleCrt = Number(input.saleCrt || 0)
   let salePc = Number(input.salePc || 0)
   let saleTotal = Number(input.saleTotal || 0)
+  const inputUnit = (input.unit || productUnit).toUpperCase().trim()
 
-  // Unit-aware calculation if only partial quantities provided
-  if (saleTotal > 0 && saleCrt === 0 && salePc === 0) {
-    if (pcsPerCrt > 1) {
+  if (pcsPerCrt > 1 && (inputUnit === "CRT" || inputUnit === "CBX")) {
+    if (saleCrt > 0 && (saleCrt % 1 !== 0 || (saleTotal === saleCrt && salePc === 0))) {
+      const totalPcs = Math.round(saleCrt * pcsPerCrt)
+      saleCrt = Math.floor(totalPcs / pcsPerCrt)
+      salePc = totalPcs % pcsPerCrt
+      saleTotal = totalPcs
+    } else if (saleTotal > 0 && saleTotal % 1 !== 0) {
+      const totalPcs = Math.round(saleTotal * pcsPerCrt)
+      saleCrt = Math.floor(totalPcs / pcsPerCrt)
+      salePc = totalPcs % pcsPerCrt
+      saleTotal = totalPcs
+    } else if (saleTotal > 0 && saleCrt === 0 && salePc === 0) {
+      const roundedTotal = Math.round(saleTotal)
+      saleCrt = Math.floor(roundedTotal / pcsPerCrt)
+      salePc = roundedTotal % pcsPerCrt
+      saleTotal = roundedTotal
+    } else if (saleCrt > 0 || salePc > 0) {
+      saleTotal = Math.round(saleCrt * pcsPerCrt + salePc)
       saleCrt = Math.floor(saleTotal / pcsPerCrt)
       salePc = saleTotal % pcsPerCrt
-    } else {
-      saleCrt = saleTotal
-      salePc = 0
     }
-  } else if (saleCrt > 0 && saleTotal === 0) {
-    saleTotal = pcsPerCrt > 1 ? (saleCrt * pcsPerCrt + salePc) : saleCrt
+  } else {
+    if (saleTotal === 0 && saleCrt > 0) {
+      saleTotal = saleCrt
+    } else if (saleCrt === 0 && saleTotal > 0) {
+      saleCrt = saleTotal
+    }
   }
 
   // 2. Find existing batch master to inherit metadata (ubd, mfd, shelf life)

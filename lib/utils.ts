@@ -16,20 +16,22 @@ export function formatMixedUnit(
   outerUnit: string = "CRT",
   innerUnit: string = "PCS"
 ): string {
-  const total = Math.round(Number(totalQty ?? 0) * 100) / 100
+  const total = Number(totalQty ?? 0)
   const factor = Math.max(1, Math.round(Number(pcsPerCrt) || 1))
 
   if (factor <= 1) {
     const u = outerUnit === "CRT" || outerUnit === "CBX" ? "PCS" : (outerUnit || innerUnit || "PCS")
-    return `${total.toLocaleString()} ${u}`
+    const formattedVal = Math.round(total * 100) / 100
+    return `${formattedVal.toLocaleString()} ${u}`
   }
 
   if (total === 0) {
     return `0 ${outerUnit}`
   }
 
-  const crt = Math.floor(total / factor)
-  const pc = Math.round((total % factor) * 100) / 100
+  const roundedTotal = Math.round(total)
+  const crt = Math.floor(roundedTotal / factor)
+  const pc = roundedTotal % factor
 
   const parts: string[] = []
   if (crt > 0) {
@@ -71,9 +73,22 @@ export function buildQtyWithUnits(
   const factor = Math.max(1, Math.round(Number(pcsPerCrt) || 1))
   const crtUnit = normUnit
   const pcUnit = factor > 1 ? "PCS" : normUnit
-  const calcTotal = Number(total || 0)
-  const calcCrt = Number(crt || 0)
-  const calcPc = Number(pc || 0)
+  
+  let calcTotal = Number(total || 0)
+  let calcCrt = Number(crt || 0)
+  let calcPc = Number(pc || 0)
+
+  // If total is provided and factor > 1, ensure clean integer crate and piece split
+  if (calcTotal > 0 && factor > 1) {
+    const roundedTotal = Math.round(calcTotal)
+    calcCrt = Math.floor(roundedTotal / factor)
+    calcPc = roundedTotal % factor
+    calcTotal = roundedTotal
+  } else if (calcCrt > 0 && factor > 1 && calcTotal === 0) {
+    calcTotal = Math.round(calcCrt * factor + calcPc)
+    calcCrt = Math.floor(calcTotal / factor)
+    calcPc = calcTotal % factor
+  }
 
   return {
     crt: calcCrt,
