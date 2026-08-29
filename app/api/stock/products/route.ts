@@ -8,12 +8,14 @@ export async function GET(req: NextRequest) {
     const sql = unit
       ? `SELECT id, name, sku_code, category, unit,
                 COALESCE(pcs_per_crt, 1) as pcs_per_crt,
+                COALESCE(pack_label, 'Crt/Box') as pack_label,
                 COALESCE(shelf_life_days, 0) as shelf_life_days
          FROM products
          WHERE unit = ?
          ORDER BY category, name`
       : `SELECT id, name, sku_code, category, unit,
                 COALESCE(pcs_per_crt, 1) as pcs_per_crt,
+                COALESCE(pack_label, 'Crt/Box') as pack_label,
                 COALESCE(shelf_life_days, 0) as shelf_life_days
          FROM products
          ORDER BY category, name`
@@ -29,13 +31,14 @@ export async function GET(req: NextRequest) {
       skuCode: String(r.sku_code || ""),
       category: String(r.category),
       unit: String(r.unit),
+      packLabel: String(r.pack_label || "Crt/Box"),
       pcsPerCrt: Number(r.pcs_per_crt || 1),
       shelfLifeDays: Number(r.shelf_life_days || 0),
     }))
 
     return NextResponse.json({ success: true, data: products })
   } catch (err) {
-    console.error(err)
+    console.error("GET /api/stock/products error:", err)
     return NextResponse.json({ success: false, error: String(err) }, { status: 500 })
   }
 }

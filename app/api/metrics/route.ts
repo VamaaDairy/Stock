@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
 
     // Bulk array support
     if (Array.isArray(body)) {
-      const prodResult = await turso.execute("SELECT id, name, sku_code FROM products")
+      const prodResult = await turso.execute("SELECT id, name, sku_code, unit FROM products")
       const idSet = new Set<string>()
       const normMap = new Map<string, string>()
 
@@ -41,22 +41,46 @@ export async function POST(req: NextRequest) {
 
         if (!pid || !item.date || !item.batchNumber) continue
 
-        const crt = Number(item.saleCrt || item.sale?.crt || 0)
-        const pc = Number(item.salePc || item.sale?.pc || 0)
-        const total = Number(item.saleTotal || item.sale?.total || (crt > 0 ? crt : 0))
+        const itemUnit = item.unit || item.sale?.unit || item.production?.unit || undefined
 
-        if (crt === 0 && pc === 0 && total === 0 && !item.production) continue
+        if (item.production) {
+          const res = await upsertEntry({
+            productId: pid,
+            date: item.date,
+            batchNumber: item.batchNumber,
+            skuCode: item.skuCode,
+            unit: itemUnit,
+            manufacturingDate: item.manufacturingDate,
+            ubd: item.ubd,
+            expiryDate: item.expiryDate,
+            shelfLifeDays: item.shelfLifeDays,
+            production: item.production,
+            demand: item.demand,
+            sale: item.sale || { crt: 0, pc: 0, total: 0 },
+            salesReturn: item.salesReturn,
+            salesTarget: item.salesTarget,
+            notes: item.notes,
+          })
+          results.push(res)
+        } else {
+          const crt = Number(item.sale?.crt ?? item.saleCrt ?? 0)
+          const pc = Number(item.sale?.pc ?? item.salePc ?? 0)
+          const total = Number(item.sale?.total ?? item.saleTotal ?? (crt > 0 || pc > 0 ? 0 : (item.quantity ?? 0)))
 
-        const res = await recordSaleEntry({
-          productId: pid,
-          date: item.date,
-          batchNumber: item.batchNumber,
-          saleCrt: crt,
-          salePc: pc,
-          saleTotal: total,
-          notes: item.notes,
-        })
-        results.push(res)
+          if (crt === 0 && pc === 0 && total === 0) continue
+
+          const res = await recordSaleEntry({
+            productId: pid,
+            date: item.date,
+            batchNumber: item.batchNumber,
+            saleCrt: crt,
+            salePc: pc,
+            saleTotal: total,
+            unit: itemUnit,
+            notes: item.notes,
+          })
+          results.push(res)
+        }
       }
       return NextResponse.json({ success: true, recordedCount: results.length, data: results })
     }
@@ -78,3 +102,4 @@ export async function GET(req: NextRequest) {
   const rows = await getMetricsForDate(date)
   return NextResponse.json({ success: true, data: rows })
 }
+

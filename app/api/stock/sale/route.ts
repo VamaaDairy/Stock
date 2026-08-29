@@ -10,6 +10,16 @@ interface SaleItemInput {
   saleCrt?: number
   salePc?: number
   saleTotal?: number
+  unit?: string
+  crtUnit?: string
+  pcUnit?: string
+  quantity?: number
+  sale?: {
+    crt?: number
+    pc?: number
+    total?: number
+    unit?: string
+  }
   notes?: string
 }
 
@@ -23,7 +33,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Cache products for matching
-    const prodResult = await turso.execute("SELECT id, name, sku_code FROM products")
+    const prodResult = await turso.execute("SELECT id, name, sku_code, unit FROM products")
     const idSet = new Set<string>()
     const normMap = new Map<string, string>()
 
@@ -69,9 +79,10 @@ export async function POST(req: NextRequest) {
         continue
       }
 
-      const crt = Number(item.saleCrt || 0)
-      const pc = Number(item.salePc || 0)
-      const total = Number(item.saleTotal || 0)
+      const crt = Number(item.sale?.crt ?? item.saleCrt ?? 0)
+      const pc = Number(item.sale?.pc ?? item.salePc ?? 0)
+      const total = Number(item.sale?.total ?? item.saleTotal ?? (crt > 0 || pc > 0 ? 0 : (item.quantity ?? 0)))
+      const itemUnit = item.sale?.unit || item.unit || undefined
 
       if (crt === 0 && pc === 0 && total === 0) {
         continue
@@ -83,7 +94,8 @@ export async function POST(req: NextRequest) {
         batchNumber: item.batchNumber,
         saleCrt: crt,
         salePc: pc,
-        saleTotal: total > 0 ? total : crt,
+        saleTotal: total,
+        unit: itemUnit,
         notes: item.notes,
       })
       results.push(res)
@@ -95,3 +107,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, error: String(err) }, { status: 500 })
   }
 }
+

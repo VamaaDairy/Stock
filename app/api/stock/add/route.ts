@@ -10,14 +10,18 @@ import { upsertEntry } from "@/lib/db/metrics"
  *   productId: string,
  *   date: string,          // YYYY-MM-DD (production date)
  *   batchNumber: string,   // batch code e.g. "AA02EIP"
+ *   unit?: string,         // e.g. "CRT", "CBX", "PCS", "KG"
+ *   crtUnit?: string,
+ *   pcUnit?: string,
  *   manufacturingDate?: string,
  *   ubd?: string,          // Use Before Date
  *   expiryDate?: string,
  *   shelfLifeDays?: number,
- *   // Production quantity (smallest units):
- *   productionPc: number,  // loose pieces
- *   productionCrt: number, // cartons/boxes (optional, auto-calc if pcsPerCrt known)
- *   productionTotal: number, // primary unit total
+ *   // Production quantity:
+ *   productionPc?: number,  // loose pieces
+ *   productionCrt?: number, // cartons/boxes
+ *   productionTotal?: number, // primary unit total
+ *   production?: { crt?: number, pc?: number, total?: number, unit?: string },
  *   notes?: string
  * }
  */
@@ -28,13 +32,18 @@ export async function POST(req: NextRequest) {
       productId,
       date,
       batchNumber,
+      skuCode,
+      unit,
+      crtUnit,
+      pcUnit,
       manufacturingDate,
       ubd,
       expiryDate,
       shelfLifeDays,
-      productionPc = 0,
-      productionCrt = 0,
-      productionTotal = 0,
+      productionPc,
+      productionCrt,
+      productionTotal,
+      production,
       notes,
     } = body
 
@@ -45,15 +54,24 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    const prodCrt = Number(production?.crt ?? productionCrt ?? 0)
+    const prodPc = Number(production?.pc ?? productionPc ?? 0)
+    const prodTot = Number(production?.total ?? productionTotal ?? (prodCrt > 0 || prodPc > 0 ? 0 : (body.quantity ?? 0)))
+    const entryUnit = production?.unit || unit || undefined
+
     const result = await upsertEntry({
       productId,
       date,
       batchNumber,
+      skuCode,
+      unit: entryUnit,
+      crtUnit,
+      pcUnit,
       manufacturingDate: manufacturingDate || null,
       ubd: ubd || null,
       expiryDate: expiryDate || null,
       shelfLifeDays: shelfLifeDays || null,
-      production: { crt: productionCrt, pc: productionPc, total: productionTotal },
+      production: { crt: prodCrt, pc: prodPc, total: prodTot, unit: entryUnit },
       sale: { crt: 0, pc: 0, total: 0 },
       salesReturn: { crt: 0, pc: 0, total: 0 },
       notes,
@@ -61,7 +79,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, ...result })
   } catch (err) {
-    console.error(err)
+    console.error("POST /api/stock/add error:", err)
     return NextResponse.json({ success: false, error: String(err) }, { status: 500 })
   }
 }
+

@@ -46,6 +46,46 @@ export function formatMixedUnit(
   return parts.join(" ")
 }
 
+export interface StructuredQty {
+  crt: number
+  pc: number
+  total: number
+  unit: string
+  crtUnit: string
+  pcUnit: string
+  display: string
+}
+
+/**
+ * Build standard quantity object with attached unit metadata
+ */
+export function buildQtyWithUnits(
+  crt: number = 0,
+  pc: number = 0,
+  total: number = 0,
+  unit: string = "CRT",
+  pcsPerCrt: number = 1,
+  packLabel?: string
+): StructuredQty {
+  const normUnit = (unit || "CRT").toUpperCase().trim()
+  const factor = Math.max(1, Math.round(Number(pcsPerCrt) || 1))
+  const crtUnit = normUnit
+  const pcUnit = factor > 1 ? "PCS" : normUnit
+  const calcTotal = Number(total || 0)
+  const calcCrt = Number(crt || 0)
+  const calcPc = Number(pc || 0)
+
+  return {
+    crt: calcCrt,
+    pc: calcPc,
+    total: calcTotal,
+    unit: normUnit,
+    crtUnit,
+    pcUnit,
+    display: formatMixedUnit(calcTotal, factor, crtUnit, pcUnit),
+  }
+}
+
 /**
  * Convert pieces to crates and remainder pieces
  */

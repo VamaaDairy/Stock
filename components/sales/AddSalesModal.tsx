@@ -171,12 +171,18 @@ export default function AddSalesModal({
           date,
           skuCode: product.skuCode,
           batchNumber: batchNumber.trim(),
+          unit: product.unit || "CRT",
           manufacturingDate: editBatch?.manufacturingDate ?? product.manufacturingDate,
           ubd: editBatch?.ubd ?? product.ubd,
           expiryDate: editBatch?.expiryDate ?? product.expiryDate,
           shelfLifeDays: editBatch?.shelfLifeDays ?? product.shelfLifeDays,
           production: editBatch?.production ?? product.production,
-          sale: { crt: Number(saleCrt) || 0, pc: Number(salePc) || 0, total: enteredSale },
+          sale: {
+            crt: Number(saleCrt) || 0,
+            pc: Number(salePc) || 0,
+            total: enteredSale,
+            unit: product.unit || "CRT",
+          },
         }),
       })
       const json = await res.json()

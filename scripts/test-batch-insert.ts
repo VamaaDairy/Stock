@@ -1,4 +1,5 @@
 import { config } from "dotenv"
+import type { StockProductRow } from "../lib/db/metrics"
 config({ path: ".env.local" })
 
 async function checkQuantitiesAreZero() {
@@ -8,7 +9,7 @@ async function checkQuantitiesAreZero() {
 
   let nonZeroCount = 0
   dashboardData.forEach(cat => {
-    cat.products.forEach(p => {
+    cat.products.forEach((p: StockProductRow) => {
       if (p.production.total !== 0 || p.demand.total !== 0 || p.sale.total !== 0 || p.currentStock !== 0) {
         nonZeroCount++
       }

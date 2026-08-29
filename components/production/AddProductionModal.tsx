@@ -184,11 +184,17 @@ export default function AddProductionModal({
           date,
           skuCode: product.skuCode,
           batchNumber: batchNumber.trim(),
+          unit: product.unit || "CRT",
           manufacturingDate: mfgDate,
           ubd: ubd || expiryDate || null,
           expiryDate: expiryDate || null,
           shelfLifeDays: Number(shelfLifeDays) || 0,
-          production: { crt: Number(prodCrt) || 0, pc: Number(prodPc) || 0, total: Number(prodTotal) || 0 },
+          production: {
+            crt: Number(prodCrt) || 0,
+            pc: Number(prodPc) || 0,
+            total: Number(prodTotal) || 0,
+            unit: product.unit || "CRT",
+          },
           sale: product.sale,
         }),
       })

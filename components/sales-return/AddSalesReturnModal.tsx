@@ -102,13 +102,19 @@ export default function AddSalesReturnModal({
           date,
           skuCode: product.skuCode,
           batchNumber: batchNumber.trim(),
+          unit: product.unit || "CRT",
           manufacturingDate: product.manufacturingDate,
           ubd: product.ubd,
           expiryDate: product.expiryDate,
           shelfLifeDays: product.shelfLifeDays,
           production: product.production,
           sale: product.sale,
-          salesReturn: { crt: Number(returnCrt) || 0, pc: Number(returnPc) || 0, total: Number(returnTotal) || 0 },
+          salesReturn: {
+            crt: Number(returnCrt) || 0,
+            pc: Number(returnPc) || 0,
+            total: Number(returnTotal) || 0,
+            unit: product.unit || "CRT",
+          },
         }),
       })
       const json = await res.json()
