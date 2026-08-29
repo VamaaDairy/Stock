@@ -1,36 +1,10 @@
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { getCurrentStock } from "@/lib/db/metrics"
 
-/**
- * GET /api/stock/current
- * Returns all-time cumulative stock for every product+batch.
- * No date filter — shows true current inventory.
- * Stock displayed in smallest units (CRT + PC).
- *
- * Response shape:
- * {
- *   success: true,
- *   data: [
- *     {
- *       category: "Dahi",
- *       products: [
- *         {
- *           id, name, skuCode, unit, pcsPerCrt,
- *           currentStockCrt, currentStockPc, currentStockTotal,
- *           currentStockDisplay,   // e.g. "10 CRT + 3 PC"
- *           productionTotal, saleTotal, salesReturnTotal,
- *           batchesList: [
- *             { batchNumber, ubd, manufacturingDate, closing: { crt, pc, total }, closingDisplay }
- *           ]
- *         }
- *       ]
- *     }
- *   ]
- * }
- */
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    const data = await getCurrentStock()
+    const unit = req.nextUrl.searchParams.get("unit") || undefined
+    const data = await getCurrentStock(unit)
     return NextResponse.json({ success: true, data })
   } catch (err) {
     console.error(err)

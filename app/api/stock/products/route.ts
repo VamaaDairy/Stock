@@ -1,21 +1,26 @@
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { turso } from "@/lib/turso"
 
-/**
- * GET /api/stock/products
- * Returns all products with their metadata for macro/bill use.
- * Includes: id, name, skuCode, category, unit, pcsPerCrt, shelfLifeDays
- *
- * Use this to populate dropdowns in your macro before calling /api/stock/add or /api/stock/remove.
- */
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const unit = req.nextUrl.searchParams.get("unit")
+
+    const sql = unit
+      ? `SELECT id, name, sku_code, category, unit,
+                COALESCE(pcs_per_crt, 1) as pcs_per_crt,
+                COALESCE(shelf_life_days, 0) as shelf_life_days
+         FROM products
+         WHERE unit = ?
+         ORDER BY category, name`
+      : `SELECT id, name, sku_code, category, unit,
+                COALESCE(pcs_per_crt, 1) as pcs_per_crt,
+                COALESCE(shelf_life_days, 0) as shelf_life_days
+         FROM products
+         ORDER BY category, name`
+
     const result = await turso.execute({
-      sql: `SELECT id, name, sku_code, category, unit,
-                   COALESCE(pcs_per_crt, 1) as pcs_per_crt,
-                   COALESCE(shelf_life_days, 0) as shelf_life_days
-            FROM products
-            ORDER BY category, name`,
+      sql,
+      args: unit ? [unit.toUpperCase()] : [],
     })
 
     const products = result.rows.map(r => ({

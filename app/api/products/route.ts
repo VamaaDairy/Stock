@@ -6,9 +6,10 @@ import {
   deleteProductFromDB,
 } from "@/lib/db/products"
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    const products = await getAllProductsFromDB()
+    const unit = req.nextUrl.searchParams.get("unit") || undefined
+    const products = await getAllProductsFromDB(unit)
     return NextResponse.json({ success: true, data: products })
   } catch (error) {
     console.error("GET /api/products error:", error)

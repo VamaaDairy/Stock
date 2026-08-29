@@ -6,6 +6,22 @@ interface Qty {
   total: number
 }
 
+interface BatchRow {
+  batchNumber: string
+  manufacturingDate: string | null
+  ubd: string | null
+  expiryDate: string | null
+  shelfLifeDays: number | null
+  opening: Qty
+  production: Qty
+  sale: Qty
+  salesReturn: Qty
+  closing: Qty
+  closingDisplay?: string
+}
+
+type StockProductRow = Record<string, unknown>
+
 interface EntryInput {
   productId: string
   date: string
@@ -23,15 +39,9 @@ interface EntryInput {
   notes?: string
 }
 
-/**
- * getAllTimeLiveStock — returns per-product all-time cumulative closing stock
- * and a list of all batches that still have remaining stock (closing > 0).
- * Used by dashboard functions to show true current inventory alongside
- * date-specific production/sales data.
- */
 async function getAllTimeLiveStock(): Promise<{
   byProduct: Map<string, { closingCrt: number; closingPc: number; closingTotal: number }>
-  batchesByProduct: Map<string, any[]>
+  batchesByProduct: Map<string, BatchRow[]>
 }> {
   const batchResult = await turso.execute({
     sql: `SELECT
@@ -63,7 +73,7 @@ async function getAllTimeLiveStock(): Promise<{
   })
 
   const byProduct = new Map<string, { closingCrt: number; closingPc: number; closingTotal: number }>()
-  const batchesByProduct = new Map<string, any[]>()
+  const batchesByProduct = new Map<string, BatchRow[]>()
 
   for (const row of batchResult.rows) {
     const pid = String(row.product_id)
@@ -71,7 +81,6 @@ async function getAllTimeLiveStock(): Promise<{
     const closingPc = Number(row.closing_pc ?? 0)
     const closingTotal = Number(row.closing_total ?? 0)
 
-    // Accumulate product-level totals
     const existing = byProduct.get(pid) ?? { closingCrt: 0, closingPc: 0, closingTotal: 0 }
     byProduct.set(pid, {
       closingCrt: existing.closingCrt + closingCrt,
@@ -79,7 +88,7 @@ async function getAllTimeLiveStock(): Promise<{
       closingTotal: existing.closingTotal + closingTotal,
     })
 
-    // Only include batches with remaining stock or some production activity
+
     if (closingTotal > 0 || Number(row.production_total ?? 0) > 0) {
       if (!batchesByProduct.has(pid)) batchesByProduct.set(pid, [])
       batchesByProduct.get(pid)!.push({
@@ -142,7 +151,7 @@ export async function upsertEntry(input: EntryInput) {
     notes,
   } = input
 
-  // If skuCode was edited/provided, update product master
+
   if (skuCode !== undefined) {
     await turso.execute({
       sql: `UPDATE products SET sku_code = ? WHERE id = ?`,
@@ -398,7 +407,7 @@ export async function getDashboardData(date: string) {
     args: [date],
   })
 
-  const batchesByProductDate = new Map<string, any[]>()
+  const batchesByProductDate = new Map<string, BatchRow[]>()
   for (const row of dateBatchesResult.rows) {
     const pid = String(row.product_id)
     if (!batchesByProductDate.has(pid)) batchesByProductDate.set(pid, [])
@@ -410,7 +419,6 @@ export async function getDashboardData(date: string) {
       shelfLifeDays: row.shelf_life_days !== null ? Number(row.shelf_life_days) : null,
       opening: { crt: Number(row.opening_crt ?? 0), pc: Number(row.opening_pc ?? 0), total: Number(row.opening_total ?? 0) },
       production: { crt: Number(row.production_crt ?? 0), pc: Number(row.production_pc ?? 0), total: Number(row.production_total ?? 0) },
-      demand: { crt: Number(row.demand_crt ?? 0), pc: Number(row.demand_pc ?? 0), total: Number(row.demand_total ?? 0) },
       sale: { crt: Number(row.sale_crt ?? 0), pc: Number(row.sale_pc ?? 0), total: Number(row.sale_total ?? 0) },
       salesReturn: { crt: Number(row.sales_return_crt ?? 0), pc: Number(row.sales_return_pc ?? 0), total: Number(row.sales_return_total ?? 0) },
       closing: { crt: Number(row.closing_crt ?? 0), pc: Number(row.closing_pc ?? 0), total: Number(row.closing_total ?? 0) },
@@ -421,7 +429,7 @@ export async function getDashboardData(date: string) {
     metricsResult.rows.map(row => [String(row.product_id), row])
   )
 
-  const categories = new Map<string, any[]>()
+  const categories = new Map<string, StockProductRow[]>()
 
   for (const p of productsResult.rows) {
     const productId = String(p.id)
@@ -534,7 +542,7 @@ export async function getPeriodDashboardData(startDate: string, endDate: string)
     args: [startDate, endDate],
   })
 
-  const batchesByProductPeriod = new Map<string, any[]>()
+  const batchesByProductPeriod = new Map<string, BatchRow[]>()
   for (const row of periodBatchesResult.rows) {
     const pid = String(row.product_id)
     if (!batchesByProductPeriod.has(pid)) batchesByProductPeriod.set(pid, [])
@@ -546,7 +554,6 @@ export async function getPeriodDashboardData(startDate: string, endDate: string)
       shelfLifeDays: row.shelf_life_days !== null ? Number(row.shelf_life_days) : null,
       opening: { crt: Number(row.opening_crt ?? 0), pc: Number(row.opening_pc ?? 0), total: Number(row.opening_total ?? 0) },
       production: { crt: Number(row.production_crt ?? 0), pc: Number(row.production_pc ?? 0), total: Number(row.production_total ?? 0) },
-      demand: { crt: Number(row.demand_crt ?? 0), pc: Number(row.demand_pc ?? 0), total: Number(row.demand_total ?? 0) },
       sale: { crt: Number(row.sale_crt ?? 0), pc: Number(row.sale_pc ?? 0), total: Number(row.sale_total ?? 0) },
       salesReturn: { crt: Number(row.sales_return_crt ?? 0), pc: Number(row.sales_return_pc ?? 0), total: Number(row.sales_return_total ?? 0) },
       closing: { crt: Number(row.closing_crt ?? 0), pc: Number(row.closing_pc ?? 0), total: Number(row.closing_total ?? 0) },
@@ -560,7 +567,7 @@ export async function getPeriodDashboardData(startDate: string, endDate: string)
     metricsResult.rows.map(row => [String(row.product_id), row])
   )
 
-  const categories = new Map<string, any[]>()
+  const categories = new Map<string, StockProductRow[]>()
 
   for (const p of productsResult.rows) {
     const productId = String(p.id)
@@ -616,15 +623,15 @@ export async function getPeriodDashboardData(startDate: string, endDate: string)
   }))
 }
 
-/**
- * getCurrentStock — returns cumulative all-time closing stock (no date filter).
- * For each product+batch, sums ALL production/sales/returns ever recorded.
- * Closing = SUM(opening) + SUM(production) + SUM(sales_return) - SUM(sale)
- * Displayed in smallest units: CRT (boxes) + PC (loose pieces) + total.
- */
-export async function getCurrentStock() {
+
+export async function getCurrentStock(unit?: string) {
+  const productsSql = unit
+    ? `SELECT id, name, sku_code, category, unit, COALESCE(pcs_per_crt, 1) as pcs_per_crt, COALESCE(shelf_life_days, 0) as shelf_life_days FROM products WHERE unit = ? ORDER BY category, name`
+    : `SELECT id, name, sku_code, category, unit, COALESCE(pcs_per_crt, 1) as pcs_per_crt, COALESCE(shelf_life_days, 0) as shelf_life_days FROM products ORDER BY category, name`
+
   const productsResult = await turso.execute({
-    sql: `SELECT id, name, sku_code, category, unit, COALESCE(pcs_per_crt, 1) as pcs_per_crt, COALESCE(shelf_life_days, 0) as shelf_life_days FROM products ORDER BY category, name`,
+    sql: productsSql,
+    args: unit ? [unit.toUpperCase()] : [],
   })
 
   // All-time batch totals (no date filter)
@@ -682,7 +689,7 @@ export async function getCurrentStock() {
   })
 
   // Group batches by product
-  const batchesByProduct = new Map<string, any[]>()
+  const batchesByProduct = new Map<string, BatchRow[]>()
   for (const row of batchResult.rows) {
     const pid = String(row.product_id)
     if (!batchesByProduct.has(pid)) batchesByProduct.set(pid, [])
@@ -714,7 +721,7 @@ export async function getCurrentStock() {
     productTotalsResult.rows.map(r => [String(r.product_id), r])
   )
 
-  const categories = new Map<string, any[]>()
+  const categories = new Map<string, StockProductRow[]>()
 
   for (const p of productsResult.rows) {
     const productId = String(p.id)
@@ -786,13 +793,7 @@ export async function getCurrentStock() {
   }))
 }
 
-/**
- * Format stock in smallest displayable units:
- * If crt > 0 and pc > 0: "10 CRT 3 PC"
- * If only crt: "10 CRT"
- * If only pc: "3 PC"
- * If total only (non-crt unit like KG/PCS): shows total
- */
+
 function formatSmallestUnit(crt: number, pc: number, total: number): string {
   const parts: string[] = []
   if (crt > 0) parts.push(`${crt} CRT`)

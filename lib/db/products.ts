@@ -11,11 +11,19 @@ export interface DBProduct {
   shelfLifeDays: number
 }
 
-export async function getAllProductsFromDB(): Promise<DBProduct[]> {
+export async function getAllProductsFromDB(unit?: string): Promise<DBProduct[]> {
+  const sql = unit
+    ? `SELECT id, name, sku_code, category, unit, COALESCE(pcs_per_crt, 1) as pcs_per_crt, COALESCE(pack_label, 'Crt/Box') as pack_label, COALESCE(shelf_life_days, 0) as shelf_life_days
+       FROM products
+       WHERE unit = ?
+       ORDER BY category, name`
+    : `SELECT id, name, sku_code, category, unit, COALESCE(pcs_per_crt, 1) as pcs_per_crt, COALESCE(pack_label, 'Crt/Box') as pack_label, COALESCE(shelf_life_days, 0) as shelf_life_days
+       FROM products
+       ORDER BY category, name`
+
   const result = await turso.execute({
-    sql: `SELECT id, name, sku_code, category, unit, COALESCE(pcs_per_crt, 1) as pcs_per_crt, COALESCE(pack_label, 'Crt/Box') as pack_label, COALESCE(shelf_life_days, 0) as shelf_life_days
-          FROM products
-          ORDER BY category, name`,
+    sql,
+    args: unit ? [unit.toUpperCase()] : [],
   })
 
   return result.rows.map(row => ({
