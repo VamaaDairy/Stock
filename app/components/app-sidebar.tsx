@@ -1,30 +1,32 @@
 'use client'
 
-import { usePathname } from "next/navigation"
+import { useEffect, useState } from "react"
+import { usePathname, useRouter } from "next/navigation"
 import Link from "next/link"
-import { Home, Info, LayoutDashboard, Settings, Package, Factory, Truck, RotateCcw, User } from "lucide-react"
+import { Home, Info, LayoutDashboard, Settings, Package, Factory, Truck, RotateCcw, User, LogOut } from "lucide-react"
 import {
   Sidebar,
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarFooter,
 } from "@/components/ui/sidebar"
 
-const pages = [
-  { name: "Home", href: "/", icon: Home },
-  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { name: "Production", href: "/production", icon: Factory },
-  { name: "Sales", href: "/sales", icon: Truck },
-  { name: "Sales Return", href: "/sales-return", icon: RotateCcw },
-  { name: "Products", href: "/products", icon: Package },
-  { name: "About", href: "/about", icon: Info },
-  { name: "Settings", href: "/settings", icon: Settings },
-  { name: "Profile", href: "/profile", icon: User },
+type PageKey = "dashboard" | "production" | "sales" | "sales-return" | "products" | "about" | "settings"
+type PermissionMap = Partial<Record<PageKey, boolean>>
+
+const ALL_PAGES: { key: PageKey; name: string; href: string; icon: React.ElementType }[] = [
+  { key: "dashboard", name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { key: "production", name: "Production", href: "/production", icon: Factory },
+  { key: "sales", name: "Sales", href: "/sales", icon: Truck },
+  { key: "sales-return", name: "Sales Return", href: "/sales-return", icon: RotateCcw },
+  { key: "products", name: "Products", href: "/products", icon: Package },
+  { key: "about", name: "About", href: "/about", icon: Info },
+  { key: "settings", name: "Settings", href: "/settings", icon: Settings },
 ]
 
 function GaiaLogo({ className = "" }: { className?: string }) {
@@ -34,7 +36,6 @@ function GaiaLogo({ className = "" }: { className?: string }) {
       viewBox="0 0 260 150"
       xmlns="http://www.w3.org/2000/svg"
     >
-      {/* Irregular blob/ribbon shape behind "gaia" only — organic, wavy, uneven edges */}
       <path
         d="M16 42
            C 8 26, 16 6, 38 4
@@ -66,7 +67,6 @@ function GaiaLogo({ className = "" }: { className?: string }) {
       >
         gaia
       </text>
-      {/* Tagline sits below and outside the blob shape */}
       <text
         x="130"
         y="132"
@@ -84,6 +84,41 @@ function GaiaLogo({ className = "" }: { className?: string }) {
 
 export function AppSidebar() {
   const pathname = usePathname()
+  const router = useRouter()
+  const [permissions, setPermissions] = useState<PermissionMap>({})
+  const [userName, setUserName] = useState("")
+  const [userRole, setUserRole] = useState("")
+
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((r) => r.json())
+      .then(async (data) => {
+        if (!data.success) return
+        setUserName(data.name || data.email)
+        setUserRole(data.role || "")
+
+        // Fetch role permissions
+        if (data.role === "admin") {
+          // Admin sees everything
+          const allAllowed: PermissionMap = {}
+          ALL_PAGES.forEach((p) => { allAllowed[p.key] = true })
+          setPermissions(allAllowed)
+        } else {
+          const res = await fetch("/api/admin/permissions")
+          const pData = await res.json()
+          if (pData.success && pData.permissions?.[data.role]) {
+            setPermissions(pData.permissions[data.role])
+          }
+        }
+      })
+  }, [])
+
+  async function handleLogout() {
+    await fetch("/api/auth/logout", { method: "POST" })
+    router.push("/login")
+  }
+
+  const visiblePages = ALL_PAGES.filter((p) => permissions[p.key])
 
   return (
     <Sidebar collapsible="icon">
@@ -96,7 +131,7 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              {pages.map((page) => (
+              {visiblePages.map((page) => (
                 <SidebarMenuItem key={page.href}>
                   <SidebarMenuButton
                     isActive={pathname === page.href}
@@ -114,6 +149,31 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+      <SidebarFooter className="px-2 pb-4 space-y-1">
+        {/* Profile link */}
+        <SidebarMenuButton
+          tooltip="Profile"
+          render={
+            <Link href="/settings">
+              <User />
+              <div className="flex flex-col leading-tight">
+                <span className="text-xs font-semibold text-slate-700 truncate">{userName}</span>
+                <span className="text-xs text-slate-400 capitalize">{userRole}</span>
+              </div>
+            </Link>
+          }
+        />
+        {/* Logout */}
+        <SidebarMenuButton
+          tooltip="Logout"
+          render={
+            <button onClick={handleLogout} className="w-full flex items-center gap-2 text-red-500 hover:text-red-700">
+              <LogOut className="w-4 h-4" />
+              <span>Logout</span>
+            </button>
+          }
+        />
+      </SidebarFooter>
     </Sidebar>
   )
 }

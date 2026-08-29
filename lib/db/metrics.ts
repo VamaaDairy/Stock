@@ -292,12 +292,17 @@ export async function upsertEntry(input: EntryInput) {
         pc = total % pcsPerCrt
       }
     } else {
+      // PCS / KG / other unit — pcsPerCrt = 1, crt = pc = total
       if (total === 0 && crt > 0) total = crt
+      if (total === 0 && pc > 0) total = pc
       if (crt === 0 && total > 0) crt = total
+      // Always keep pc = total for PCS items so closing_pc stays consistent
+      pc = total
     }
 
     return { crt, pc, total }
   }
+
 
   const { crt: prodCrt, pc: prodPc, total: prodTotal } = normalizeQty(production)
   const { crt: demCrt, pc: demPc, total: demTotal } = normalizeQty(demand)
@@ -408,11 +413,12 @@ export async function recordSaleEntry(input: {
       salePc = saleTotal % pcsPerCrt
     }
   } else {
-    if (saleTotal === 0 && saleCrt > 0) {
-      saleTotal = saleCrt
-    } else if (saleCrt === 0 && saleTotal > 0) {
-      saleCrt = saleTotal
-    }
+    // PCS / KG items — pcsPerCrt = 1, crt = pc = total
+    if (saleTotal === 0 && saleCrt > 0) saleTotal = saleCrt
+    if (saleTotal === 0 && salePc > 0) saleTotal = salePc
+    if (saleCrt === 0 && saleTotal > 0) saleCrt = saleTotal
+    // Always keep salePc = saleTotal for PCS items so closing_pc stays consistent
+    salePc = saleTotal
   }
 
   // 2. Find existing batch master to inherit metadata (ubd, mfd, shelf life)
@@ -461,21 +467,34 @@ export async function recordSaleEntry(input: {
     })
   }
 
-  // 4. Update or insert daily_metrics preserving existing production/opening
+  // 4. Update or insert daily_metrics — ACCUMULATE sales (don't overwrite)
   const existingMetrics = await turso.execute({
     sql: `SELECT id, sale_crt, sale_pc, sale_total FROM daily_metrics WHERE batch_id = ?`,
     args: [batchId],
   })
 
   if (existingMetrics.rows.length > 0) {
+    // ADD to existing sale values (not replace) — macro can be called multiple times
+    const prevSaleCrt = Number(existingMetrics.rows[0].sale_crt ?? 0)
+    const prevSalePc = Number(existingMetrics.rows[0].sale_pc ?? 0)
+    const prevSaleTotal = Number(existingMetrics.rows[0].sale_total ?? 0)
+
+    const newSaleCrt = prevSaleCrt + saleCrt
+    const newSalePc = prevSalePc + salePc
+    const newSaleTotal = prevSaleTotal + saleTotal
+
     await turso.execute({
       sql: `UPDATE daily_metrics SET
               sale_crt = ?, sale_pc = ?, sale_total = ?,
               notes = COALESCE(?, notes),
               updated_at = datetime('now')
             WHERE batch_id = ?`,
-      args: [saleCrt, salePc, saleTotal, notes ?? null, batchId],
+      args: [newSaleCrt, newSalePc, newSaleTotal, notes ?? null, batchId],
     })
+
+    saleCrt = newSaleCrt
+    salePc = newSalePc
+    saleTotal = newSaleTotal
   } else {
     const opening = await getPreviousClosing(productId, date, productUnit, pcsPerCrt)
     await turso.execute({
