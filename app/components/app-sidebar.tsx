@@ -16,10 +16,11 @@ import {
   SidebarFooter,
 } from "@/components/ui/sidebar"
 
-type PageKey = "dashboard" | "production" | "sales" | "sales-return" | "products" | "about" | "settings"
+type PageKey = "dashboard" | "production" | "sales" | "sales-return" | "products" | "about" | "settings" | "home"
 type PermissionMap = Partial<Record<PageKey, boolean>>
 
 const ALL_PAGES: { key: PageKey; name: string; href: string; icon: React.ElementType }[] = [
+  { key: "home", name: "Home", href: "/", icon: Home },
   { key: "dashboard", name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { key: "production", name: "Production", href: "/production", icon: Factory },
   { key: "sales", name: "Sales", href: "/sales", icon: Truck },
