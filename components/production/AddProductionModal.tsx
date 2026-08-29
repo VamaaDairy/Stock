@@ -189,7 +189,6 @@ export default function AddProductionModal({
           expiryDate: expiryDate || null,
           shelfLifeDays: Number(shelfLifeDays) || 0,
           production: { crt: Number(prodCrt) || 0, pc: Number(prodPc) || 0, total: Number(prodTotal) || 0 },
-          demand: product.demand,
           sale: product.sale,
         }),
       })

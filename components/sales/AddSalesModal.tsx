@@ -176,7 +176,6 @@ export default function AddSalesModal({
           expiryDate: editBatch?.expiryDate ?? product.expiryDate,
           shelfLifeDays: editBatch?.shelfLifeDays ?? product.shelfLifeDays,
           production: editBatch?.production ?? product.production,
-          demand: product.demand,
           sale: { crt: Number(saleCrt) || 0, pc: Number(salePc) || 0, total: enteredSale },
         }),
       })

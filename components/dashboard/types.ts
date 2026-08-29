@@ -35,7 +35,7 @@ export interface Product {
   shelfLifeDays: number | null
   opening: Qty
   production: Qty
-  demand: Qty
+  demand?: Qty
   sale: Qty
   salesReturn?: Qty
   closing: Qty

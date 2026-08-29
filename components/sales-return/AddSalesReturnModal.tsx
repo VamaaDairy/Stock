@@ -107,7 +107,6 @@ export default function AddSalesReturnModal({
           expiryDate: product.expiryDate,
           shelfLifeDays: product.shelfLifeDays,
           production: product.production,
-          demand: product.demand,
           sale: product.sale,
           salesReturn: { crt: Number(returnCrt) || 0, pc: Number(returnPc) || 0, total: Number(returnTotal) || 0 },
         }),

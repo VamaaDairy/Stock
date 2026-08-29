@@ -16,7 +16,7 @@ interface EntryInput {
   expiryDate?: string | null
   shelfLifeDays?: number | null
   production: Qty
-  demand: Qty
+  demand?: Qty
   sale: Qty
   salesReturn?: Qty
   salesTarget?: number
@@ -135,7 +135,7 @@ export async function upsertEntry(input: EntryInput) {
     expiryDate = null,
     shelfLifeDays = null,
     production,
-    demand,
+    demand = { crt: 0, pc: 0, total: 0 },
     sale,
     salesReturn = { crt: 0, pc: 0, total: 0 },
     salesTarget = 0,

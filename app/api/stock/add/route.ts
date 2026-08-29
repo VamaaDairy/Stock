@@ -54,7 +54,6 @@ export async function POST(req: NextRequest) {
       expiryDate: expiryDate || null,
       shelfLifeDays: shelfLifeDays || null,
       production: { crt: productionCrt, pc: productionPc, total: productionTotal },
-      demand: { crt: 0, pc: 0, total: 0 },
       sale: { crt: 0, pc: 0, total: 0 },
       salesReturn: { crt: 0, pc: 0, total: 0 },
       notes,
