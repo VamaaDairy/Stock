@@ -97,17 +97,17 @@ export default function ProductFormModal({
       <DialogTrigger
         className={
           isEditing
-            ? "h-8 text-xs font-bold bg-[#1e40af] hover:bg-[#1d4ed8] text-white px-3 rounded-lg flex items-center gap-1.5 shadow-sm cursor-pointer"
-            : "h-9 px-3.5 text-xs font-bold bg-[#1e40af] hover:bg-[#1d4ed8] text-white rounded-lg flex items-center gap-1.5 shadow-sm cursor-pointer"
+            ? "h-7 px-2.5 text-[11px] font-bold bg-[#4A6FA5] hover:bg-[#3E5FA0] text-white rounded-md inline-flex items-center justify-center gap-1 shadow-2xs cursor-pointer transition-colors border-none"
+            : "h-9 px-4 text-xs font-bold bg-[#4A6FA5] hover:bg-[#3E5FA0] text-white rounded-lg inline-flex items-center justify-center gap-1.5 shadow-sm cursor-pointer transition-colors border-none"
         }
       >
         {isEditing ? (
           <>
-            <Edit className="h-3.5 w-3.5" /> Edit
+            <Edit className="h-3.5 w-3.5 text-white" /> <span>Edit</span>
           </>
         ) : (
           <>
-            <Plus className="h-4 w-4" /> Add Product
+            <Plus className="h-4 w-4 text-white" /> <span>Add Product</span>
           </>
         )}
       </DialogTrigger>

@@ -63,11 +63,11 @@
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.279 0.041 260.031);
 
-  --primary: oklch(0.424 0.199 265.638);            /* Gaia blue */
-  --primary-foreground: oklch(1 0 0);
+  --primary: #4A6FA5;                               /* Gaia logo blue */
+  --primary-foreground: #FFFFFF;
 
   --secondary: oklch(0.97 0.014 254.604);           /* soft blue-50 */
-  --secondary-foreground: oklch(0.379 0.146 265.522);
+  --secondary-foreground: #2B4C86;
 
   --muted: oklch(0.984 0.003 247.858);              /* slate-50 */
   --muted-foreground: oklch(0.554 0.046 257.417);   /* slate-500 */
@@ -79,24 +79,24 @@
 
   --border: oklch(0.929 0.013 255.508);             /* slate-200 */
   --input: oklch(0.929 0.013 255.508);
-  --ring: oklch(0.623 0.214 259.815);               /* blue-500 focus ring */
+  --ring: #4A6FA5;                                  /* Gaia blue focus ring */
 
-  --chart-1: oklch(0.424 0.199 265.638);
+  --chart-1: #4A6FA5;
   --chart-2: oklch(0.527 0.154 150.069);
   --chart-3: oklch(0.554 0.046 257.417);
   --chart-4: oklch(0.704 0.04 256.788);
-  --chart-5: oklch(0.379 0.146 265.522);
+  --chart-5: #3E5FA0;
 
   --radius: 0.625rem;
 
   --sidebar: oklch(1 0 0);
   --sidebar-foreground: oklch(0.279 0.041 260.031);
-  --sidebar-primary: oklch(0.424 0.199 265.638);
-  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-primary: #4A6FA5;
+  --sidebar-primary-foreground: #FFFFFF;
   --sidebar-accent: oklch(0.97 0.014 254.604);
-  --sidebar-accent-foreground: oklch(0.379 0.146 265.522);
+  --sidebar-accent-foreground: #2B4C86;
   --sidebar-border: oklch(0.929 0.013 255.508);
-  --sidebar-ring: oklch(0.623 0.214 259.815);
+  --sidebar-ring: #4A6FA5;
 }
 
 @layer base {

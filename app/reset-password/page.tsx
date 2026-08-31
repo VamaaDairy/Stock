@@ -172,7 +172,7 @@ function ResetPasswordContent() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3.5 text-[15px] font-semibold text-white bg-blue-800 hover:bg-blue-900 disabled:opacity-60 rounded-lg cursor-pointer transition-colors"
+            className="w-full py-3.5 text-[15px] font-semibold text-white bg-gradient-to-br from-[#4A6FA5] to-[#3E5FA0] hover:brightness-110 disabled:opacity-60 rounded-lg cursor-pointer transition-all shadow-xs"
           >
             {loading ? "Resetting..." : "Reset Password"}
           </button>
