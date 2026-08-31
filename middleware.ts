@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { verifySession } from "@/lib/auth"
 
 // Routes that never need auth
-const PUBLIC_PATHS = ["/login", "/api/"]
+const PUBLIC_PATHS = ["/login", "/forgot-password", "/reset-password", "/api/"]
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
@@ -12,14 +12,20 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next()
   }
 
-  // Public UI routes
-  if (pathname.startsWith("/login")) {
-    // If already logged in, redirect to dashboard
-    const token = req.cookies.get("session")?.value
-    if (token) {
-      const payload = await verifySession(token)
-      if (payload) {
-        return NextResponse.redirect(new URL("/dashboard", req.url))
+  // Public auth UI routes
+  if (
+    pathname.startsWith("/login") ||
+    pathname.startsWith("/forgot-password") ||
+    pathname.startsWith("/reset-password")
+  ) {
+    // If already logged in, redirect to dashboard (unless on reset-password)
+    if (pathname.startsWith("/login") || pathname.startsWith("/forgot-password")) {
+      const token = req.cookies.get("session")?.value
+      if (token) {
+        const payload = await verifySession(token)
+        if (payload) {
+          return NextResponse.redirect(new URL("/dashboard", req.url))
+        }
       }
     }
     return NextResponse.next()
