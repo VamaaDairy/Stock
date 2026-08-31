@@ -26,6 +26,7 @@ export interface BatchRow {
   salesReturn: Qty
   closing: Qty
   closingDisplay?: string
+  isExpired?: boolean
 }
 
 export interface StockProductRow {
@@ -58,12 +59,13 @@ export interface StockProductRow {
   salePc?: number
   salesReturnTotal?: number
   demandTotal?: number
+  expiredTotal?: number
   currentStock: number
   currentStockTotal?: number
-  currentStockCrt: number
-  currentStockPc: number
-  currentStockDisplay: string
-  batchesList: BatchRow[]
+  currentStockCrt?: number
+  currentStockPc?: number
+  currentStockDisplay?: string
+  batchesList?: BatchRow[]
 }
 
 export interface EntryInput {
@@ -1006,6 +1008,8 @@ export async function getCurrentStock(unit?: string) {
           GROUP BY b.product_id`,
   })
 
+  const todayStr = new Date().toISOString().slice(0, 10)
+
   // Group batches by product
   const batchesByProduct = new Map<string, BatchRow[]>()
   for (const row of batchResult.rows) {
@@ -1019,17 +1023,23 @@ export async function getCurrentStock(unit?: string) {
     const unitStr = String(row.unit || "CRT")
     const pcsPerCrt = Number(row.pcs_per_crt || 1)
     const packLabel = String(row.pack_label || "Crt/Box")
+    const ubdVal = row.ubd ? String(row.ubd) : null
+    const expVal = row.expiry_date ? String(row.expiry_date) : null
+
+    // A batch is expired if its UBD or Expiry Date is earlier than today
+    const isExpired = (ubdVal !== null && ubdVal < todayStr) || (expVal !== null && expVal < todayStr)
 
     // Only include batches with remaining stock or some activity
     if (closingTotal > 0 || prodTotal > 0) {
       batchesByProduct.get(pid)!.push({
         batchNumber: String(row.batch_number || ""),
         manufacturingDate: row.manufacturing_date ? String(row.manufacturing_date) : null,
-        ubd: row.ubd ? String(row.ubd) : null,
-        expiryDate: row.expiry_date ? String(row.expiry_date) : null,
+        ubd: ubdVal,
+        expiryDate: expVal,
         shelfLifeDays: row.shelf_life_days !== null ? Number(row.shelf_life_days) : null,
         unit: unitStr,
         packLabel,
+        isExpired,
         opening: buildQtyWithUnits(Number(row.opening_crt ?? 0), Number(row.opening_pc ?? 0), Number(row.opening_total ?? 0), unitStr, pcsPerCrt, packLabel),
         production: buildQtyWithUnits(Number(row.production_crt ?? 0), Number(row.production_pc ?? 0), prodTotal, unitStr, pcsPerCrt, packLabel),
         sale: buildQtyWithUnits(Number(row.sale_crt ?? 0), Number(row.sale_pc ?? 0), Number(row.sale_total ?? 0), unitStr, pcsPerCrt, packLabel),
@@ -1056,10 +1066,6 @@ export async function getCurrentStock(unit?: string) {
 
     if (!categories.has(category)) categories.set(category, [])
 
-    const closingCrt = Number(totals?.closing_crt ?? 0)
-    const closingPc = Number(totals?.closing_pc ?? 0)
-    const closingTotal = Number(totals?.closing_total ?? 0)
-
     const prodCrt = Number(totals?.production_crt ?? 0)
     const prodPc = Number(totals?.production_pc ?? 0)
     const prodTotal = Number(totals?.production_total ?? 0)
@@ -1069,6 +1075,17 @@ export async function getCurrentStock(unit?: string) {
     const retTotal = Number(totals?.sales_return_total ?? 0)
     const demTotal = Number(totals?.demand_total ?? 0)
     const batchNums = totals?.batch_numbers ? String(totals.batch_numbers) : null
+
+    // Get all batches for this product
+    const productBatches = batchesByProduct.get(productId) || []
+
+    // Calculate Active (non-expired) closing stock vs Expired stock
+    const activeBatches = productBatches.filter(b => !b.isExpired)
+    const activeClosingTotal = activeBatches.reduce((acc, b) => acc + (b.closing?.total || 0), 0)
+    const expiredClosingTotal = productBatches.filter(b => b.isExpired).reduce((acc, b) => acc + (b.closing?.total || 0), 0)
+
+    const activeClosingCrt = Math.floor(activeClosingTotal / pcsPerCrt)
+    const activeClosingPc = activeClosingTotal % pcsPerCrt
 
     categories.get(category)!.push({
       id: productId,
@@ -1091,7 +1108,7 @@ export async function getCurrentStock(unit?: string) {
       demand: buildQtyWithUnits(0, 0, demTotal, unitStr, pcsPerCrt, packLabel),
       sale: buildQtyWithUnits(sCrt, sPc, sTotal, unitStr, pcsPerCrt, packLabel),
       salesReturn: buildQtyWithUnits(0, 0, retTotal, unitStr, pcsPerCrt, packLabel),
-      closing: buildQtyWithUnits(closingCrt, closingPc, closingTotal, unitStr, pcsPerCrt, packLabel),
+      closing: buildQtyWithUnits(activeClosingCrt, activeClosingPc, activeClosingTotal, unitStr, pcsPerCrt, packLabel),
       salesTarget: 0,
       // Totals (all-time)
       productionTotal: prodTotal,
@@ -1102,14 +1119,15 @@ export async function getCurrentStock(unit?: string) {
       salePc: sPc,
       salesReturnTotal: retTotal,
       demandTotal: demTotal,
-      // Current stock (closing balance all-time)
-      currentStock: closingTotal,
-      currentStockTotal: closingTotal,
-      currentStockCrt: closingCrt,
-      currentStockPc: closingPc,
-      // Human-readable smallest-unit display
-      currentStockDisplay: formatMixedUnit(closingTotal, pcsPerCrt, unitStr, pcsPerCrt > 1 ? "PCS" : unitStr),
-      batchesList: batchesByProduct.get(productId) || [],
+      expiredTotal: expiredClosingTotal,
+      // Active Current stock (EXCLUDES expired batches)
+      currentStock: activeClosingTotal,
+      currentStockTotal: activeClosingTotal,
+      currentStockCrt: activeClosingCrt,
+      currentStockPc: activeClosingPc,
+      // Human-readable smallest-unit display (active stock only)
+      currentStockDisplay: formatMixedUnit(activeClosingTotal, pcsPerCrt, unitStr, pcsPerCrt > 1 ? "PCS" : unitStr),
+      batchesList: productBatches,
     })
   }
 

@@ -7,6 +7,7 @@ import { Search, Package, Filter, ChevronRight, ChevronDown } from "lucide-react
 import { formatMixedUnit, calcUBDPercent, ubdPercentColor } from "@/lib/utils"
 import type { CategoryGroup, Product } from "./types"
 import { PageHeader } from "@/components/ui/page-header"
+import ExportExcelModal from "@/components/ui/ExportExcelModal"
 
 export default function Dashboard() {
   const [data, setData] = useState<CategoryGroup[]>([])
@@ -116,6 +117,12 @@ export default function Dashboard() {
           icon={Package}
           title="Current Stock Inventory"
           subtitle="All-time live balance — every unsold batch shown regardless of production date."
+          actions={
+            <ExportExcelModal
+              pageType="dashboard"
+              preloadedData={data}
+            />
+          }
         />
 
 
@@ -223,11 +230,18 @@ export default function Dashboard() {
                           )}
                         </td>
                         <td className="py-3 px-4 text-center">
-                          {(p.currentStockTotal ?? p.currentStock ?? 0) > 0 ? (
-                            <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700 font-bold text-[10px]">IN STOCK</Badge>
-                          ) : (
-                            <Badge variant="outline" className="border-slate-200 bg-slate-50 text-slate-400 font-bold text-[10px]">ZERO STOCK</Badge>
-                          )}
+                          <div className="flex flex-col items-center gap-1">
+                            {(p.currentStockTotal ?? p.currentStock ?? 0) > 0 ? (
+                              <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700 font-bold text-[10px]">IN STOCK</Badge>
+                            ) : (
+                              <Badge variant="outline" className="border-slate-200 bg-slate-50 text-slate-400 font-bold text-[10px]">ZERO STOCK</Badge>
+                            )}
+                            {Boolean(p.expiredTotal && p.expiredTotal > 0) && (
+                              <Badge variant="outline" className="border-red-200 bg-red-50 text-red-600 font-bold text-[9px]">
+                                EXPIRED ({p.expiredTotal} PCS)
+                              </Badge>
+                            )}
+                          </div>
                         </td>
                       </tr>
 

@@ -9,6 +9,7 @@ import DatePeriodSelector, { PeriodSelection } from "@/components/ui/date-period
 import { formatMixedUnit, calcUBDPercent, ubdPercentColor } from "@/lib/utils"
 import type { CategoryGroup, Product } from "@/components/dashboard/types"
 import { PageHeader } from "@/components/ui/page-header"
+import ExportExcelModal from "@/components/ui/ExportExcelModal"
 
 function todayStr() {
   return new Date().toISOString().slice(0, 10)
@@ -115,7 +116,18 @@ export default function ProductionPage() {
           icon={Factory}
           title="Daily Production Management"
           subtitle={<>Showing Production Entries for Date: <span className="font-bold text-slate-800">{currentDateLabel}</span></>}
-          actions={<DatePeriodSelector value={period} onChange={setPeriod} />}
+          actions={
+            <div className="flex items-center gap-2 flex-wrap">
+              <DatePeriodSelector value={period} onChange={setPeriod} />
+              <ExportExcelModal
+                pageType="production"
+                currentDate={period.date}
+                currentFromDate={period.fromDate}
+                currentToDate={period.toDate}
+                preloadedData={data}
+              />
+            </div>
+          }
         />
 
         {/* Search & Batch Filter */}

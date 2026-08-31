@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import Link from "next/link"
-import { Home, Info, LayoutDashboard, Settings, Package, Factory, Truck, RotateCcw, User, LogOut } from "lucide-react"
+import { Home, Info, LayoutDashboard, Settings, Package, Factory, Truck, RotateCcw, User, LogOut, AlertTriangle } from "lucide-react"
 import {
   Sidebar,
   SidebarContent,
@@ -16,7 +16,7 @@ import {
   SidebarFooter,
 } from "@/components/ui/sidebar"
 
-type PageKey = "dashboard" | "production" | "sales" | "sales-return" | "products" | "about" | "settings" | "home"
+type PageKey = "dashboard" | "production" | "sales" | "sales-return" | "products" | "about" | "settings" | "home" | "expiry"
 type PermissionMap = Partial<Record<PageKey, boolean>>
 
 const ALL_PAGES: { key: PageKey; name: string; href: string; icon: React.ElementType }[] = [
@@ -28,6 +28,7 @@ const ALL_PAGES: { key: PageKey; name: string; href: string; icon: React.Element
   { key: "products", name: "Products", href: "/products", icon: Package },
   { key: "about", name: "About", href: "/about", icon: Info },
   { key: "settings", name: "Settings", href: "/settings", icon: Settings },
+  { key: "expiry", name: "Expired Stock", href: "/expiry", icon: AlertTriangle },
 ]
 
 function GaiaLogo({ className = "" }: { className?: string }) {

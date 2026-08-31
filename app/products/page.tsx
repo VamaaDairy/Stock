@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Search, Package } from "lucide-react"
 import type { DBProduct } from "@/lib/db/products"
 import { PageHeader } from "@/components/ui/page-header"
+import ExportExcelModal from "@/components/ui/ExportExcelModal"
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<DBProduct[]>([])
@@ -54,10 +55,11 @@ export default function ProductsPage() {
           title="Products Master Management"
           subtitle="Add, update, or remove master products. All app views dynamically reference this list."
           actions={
-            <div className="flex items-center gap-3 self-start sm:self-auto">
+            <div className="flex items-center gap-3 self-start sm:self-auto flex-wrap">
               <Badge variant="outline" className="border-blue-200 bg-blue-50/60 text-[#2B4C86] font-mono font-bold text-xs">
                 Total: {products.length} Products
               </Badge>
+              <ExportExcelModal pageType="products" productsData={products} />
               <ProductFormModal onSaved={fetchProducts} />
             </div>
           }

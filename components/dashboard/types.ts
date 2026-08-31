@@ -23,6 +23,7 @@ export interface BatchDetail {
   salesReturn: Qty
   closing: Qty
   closingDisplay?: string
+  isExpired?: boolean
 }
 
 export interface Product {
@@ -60,6 +61,7 @@ export interface Product {
   salePc?: number
   salesReturnTotal?: number
   demandTotal?: number
+  expiredTotal?: number
   batchesList?: BatchDetail[]
 }
 
