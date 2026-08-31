@@ -1,5 +1,6 @@
 import { turso } from "../turso"
 import { buildQtyWithUnits, formatMixedUnit } from "../utils"
+import { syncAndGetExpiredStock } from "./expiry"
 
 export interface Qty {
   crt: number
@@ -941,6 +942,9 @@ export async function getPeriodDashboardData(startDate: string, endDate: string)
  * Displayed in smallest units: CRT (boxes) + PC (loose pieces) + total with units.
  */
 export async function getCurrentStock(unit?: string) {
+  // Sync any newly expired batches into the database expired_stock table
+  await syncAndGetExpiredStock().catch((e) => console.error("Expired stock sync error:", e))
+
   const productsSql = unit
     ? `SELECT id, name, sku_code, category, unit, COALESCE(pack_label, 'Crt/Box') as pack_label, COALESCE(pcs_per_crt, 1) as pcs_per_crt, COALESCE(shelf_life_days, 0) as shelf_life_days FROM products WHERE unit = ? ORDER BY category, name`
     : `SELECT id, name, sku_code, category, unit, COALESCE(pack_label, 'Crt/Box') as pack_label, COALESCE(pcs_per_crt, 1) as pcs_per_crt, COALESCE(shelf_life_days, 0) as shelf_life_days FROM products ORDER BY category, name`
@@ -1026,11 +1030,11 @@ export async function getCurrentStock(unit?: string) {
     const ubdVal = row.ubd ? String(row.ubd) : null
     const expVal = row.expiry_date ? String(row.expiry_date) : null
 
-    // A batch is expired if its UBD or Expiry Date is earlier than today
-    const isExpired = (ubdVal !== null && ubdVal < todayStr) || (expVal !== null && expVal < todayStr)
+    // A batch is expired if its UBD or Expiry Date is today or earlier
+    const isExpired = (ubdVal !== null && ubdVal <= todayStr) || (expVal !== null && expVal <= todayStr)
 
-    // Only include batches with remaining stock or some activity
-    if (closingTotal > 0 || prodTotal > 0) {
+    // Strictly include ONLY active, unexpired batches that have available remaining stock (> 0)
+    if (!isExpired && closingTotal > 0) {
       batchesByProduct.get(pid)!.push({
         batchNumber: String(row.batch_number || ""),
         manufacturingDate: row.manufacturing_date ? String(row.manufacturing_date) : null,
@@ -1039,7 +1043,7 @@ export async function getCurrentStock(unit?: string) {
         shelfLifeDays: row.shelf_life_days !== null ? Number(row.shelf_life_days) : null,
         unit: unitStr,
         packLabel,
-        isExpired,
+        isExpired: false,
         opening: buildQtyWithUnits(Number(row.opening_crt ?? 0), Number(row.opening_pc ?? 0), Number(row.opening_total ?? 0), unitStr, pcsPerCrt, packLabel),
         production: buildQtyWithUnits(Number(row.production_crt ?? 0), Number(row.production_pc ?? 0), prodTotal, unitStr, pcsPerCrt, packLabel),
         sale: buildQtyWithUnits(Number(row.sale_crt ?? 0), Number(row.sale_pc ?? 0), Number(row.sale_total ?? 0), unitStr, pcsPerCrt, packLabel),
@@ -1087,6 +1091,8 @@ export async function getCurrentStock(unit?: string) {
     const activeClosingCrt = Math.floor(activeClosingTotal / pcsPerCrt)
     const activeClosingPc = activeClosingTotal % pcsPerCrt
 
+    const activeBatchNumbers = activeBatches.map((b) => b.batchNumber).filter(Boolean).join(", ") || null
+
     categories.get(category)!.push({
       id: productId,
       name: String(p.name),
@@ -1096,9 +1102,9 @@ export async function getCurrentStock(unit?: string) {
       packLabel,
       pcsPerCrt,
       shelfLifeDays: p.shelf_life_days ? Number(p.shelf_life_days) : null,
-      hasEntry: !!totals,
-      batchNumber: batchNums,
-      batchNumbers: batchNums,
+      hasEntry: activeBatches.length > 0 && activeClosingTotal > 0,
+      batchNumber: activeBatchNumbers,
+      batchNumbers: activeBatchNumbers,
       manufacturingDate: null,
       ubd: null,
       expiryDate: null,
@@ -1120,14 +1126,14 @@ export async function getCurrentStock(unit?: string) {
       salesReturnTotal: retTotal,
       demandTotal: demTotal,
       expiredTotal: expiredClosingTotal,
-      // Active Current stock (EXCLUDES expired batches)
+      // Active Current stock (EXCLUDES expired and 0-stock sold batches)
       currentStock: activeClosingTotal,
       currentStockTotal: activeClosingTotal,
       currentStockCrt: activeClosingCrt,
       currentStockPc: activeClosingPc,
       // Human-readable smallest-unit display (active stock only)
       currentStockDisplay: formatMixedUnit(activeClosingTotal, pcsPerCrt, unitStr, pcsPerCrt > 1 ? "PCS" : unitStr),
-      batchesList: productBatches,
+      batchesList: activeBatches,
     })
   }
 

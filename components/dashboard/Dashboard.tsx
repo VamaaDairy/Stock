@@ -51,23 +51,18 @@ export default function Dashboard() {
     })
   }
 
-  // Extract all unique batch numbers available across products
+  // Extract all unique batch numbers available across products (ONLY active batches with positive stock)
   const availableBatches = useMemo(() => {
     const batches = new Set<string>()
     data.forEach(group => {
       group.products.forEach(p => {
         if (p.batchesList && p.batchesList.length > 0) {
           p.batchesList.forEach(b => {
-            if (b.batchNumber?.trim()) batches.add(b.batchNumber.trim())
+            const hasStock = (b.closing?.total ?? 0) > 0
+            if (b.batchNumber?.trim() && hasStock && !b.isExpired) {
+              batches.add(b.batchNumber.trim())
+            }
           })
-        } else {
-          const batchStr = p.batchNumbers || p.batchNumber || ""
-          if (batchStr) {
-            batchStr.split(',').forEach(b => {
-              const trimmed = b.trim()
-              if (trimmed) batches.add(trimmed)
-            })
-          }
         }
       })
     })
@@ -86,26 +81,30 @@ export default function Dashboard() {
     if (selectedBatch !== "all") {
       list = list.filter(p => {
         if (p.batchesList && p.batchesList.length > 0) {
-          return p.batchesList.some(b => b.batchNumber === selectedBatch)
+          return p.batchesList.some(
+            b => b.batchNumber === selectedBatch && (b.closing?.total ?? 0) > 0 && !b.isExpired
+          )
         }
-        const batchStr = p.batchNumbers || p.batchNumber || ""
-        return batchStr.split(',').map(b => b.trim()).includes(selectedBatch)
+        return false
       })
     }
 
     if (!searchQuery.trim()) return list
     const q = searchQuery.toLowerCase().trim()
-    return list.filter(
-      p => {
-        const batchStr = p.batchNumbers || p.batchNumber || (p.batchesList ? p.batchesList.map(b => b.batchNumber).join(' ') : "")
-        return (
-          p.name.toLowerCase().includes(q) ||
-          p.skuCode.toLowerCase().includes(q) ||
-          p.category.toLowerCase().includes(q) ||
-          batchStr.toLowerCase().includes(q)
-        )
-      }
-    )
+    return list.filter(p => {
+      const activeBatchStr = p.batchesList
+        ? p.batchesList
+            .filter(b => (b.closing?.total ?? 0) > 0 && !b.isExpired)
+            .map(b => b.batchNumber)
+            .join(" ")
+        : ""
+      return (
+        p.name.toLowerCase().includes(q) ||
+        p.skuCode.toLowerCase().includes(q) ||
+        p.category.toLowerCase().includes(q) ||
+        activeBatchStr.toLowerCase().includes(q)
+      )
+    })
   }, [data, searchQuery, selectedBatch])
 
   return (
@@ -181,7 +180,7 @@ export default function Dashboard() {
                 {allProducts.map(p => {
                   const isExpanded = expandedProductIds.has(p.id)
                   const activeBatches = p.batchesList
-                    ? p.batchesList.filter(b => b.closing.total > 0 || b.production.total > 0 || b.sale.total > 0)
+                    ? p.batchesList.filter(b => b.closing.total > 0 && !b.isExpired)
                     : []
                   const hasBatches = activeBatches.length > 0
 
@@ -213,7 +212,7 @@ export default function Dashboard() {
                             <span>{p.name}</span>
                             {hasBatches && (
                               <span className="text-[10px] text-slate-400 font-semibold bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100">
-                                {p.batchesList!.length} batch{p.batchesList!.length > 1 ? "es" : ""}
+                                {activeBatches.length} batch{activeBatches.length > 1 ? "es" : ""}
                               </span>
                             )}
                           </div>
@@ -230,18 +229,11 @@ export default function Dashboard() {
                           )}
                         </td>
                         <td className="py-3 px-4 text-center">
-                          <div className="flex flex-col items-center gap-1">
-                            {(p.currentStockTotal ?? p.currentStock ?? 0) > 0 ? (
-                              <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700 font-bold text-[10px]">IN STOCK</Badge>
-                            ) : (
-                              <Badge variant="outline" className="border-slate-200 bg-slate-50 text-slate-400 font-bold text-[10px]">ZERO STOCK</Badge>
-                            )}
-                            {Boolean(p.expiredTotal && p.expiredTotal > 0) && (
-                              <Badge variant="outline" className="border-red-200 bg-red-50 text-red-600 font-bold text-[9px]">
-                                EXPIRED ({p.expiredTotal} PCS)
-                              </Badge>
-                            )}
-                          </div>
+                          {(p.currentStockTotal ?? p.currentStock ?? 0) > 0 ? (
+                            <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700 font-bold text-[10px]">IN STOCK</Badge>
+                          ) : (
+                            <Badge variant="outline" className="border-slate-200 bg-slate-50 text-slate-400 font-bold text-[10px]">ZERO STOCK</Badge>
+                          )}
                         </td>
                       </tr>
 
@@ -278,8 +270,6 @@ export default function Dashboard() {
                                           <td className="py-2 px-3 text-center">
                                             {pct === null ? (
                                               <span className="text-neutral-400 text-xs">—</span>
-                                            ) : pct <= 0 ? (
-                                              <span className="text-red-600 font-black text-xs bg-red-50 px-1.5 py-0.5 rounded">EXPIRED</span>
                                             ) : (
                                               <span className={`text-xs ${ubdPercentColor(pct)}`}>{pct.toFixed(1)}%</span>
                                             )}
@@ -300,7 +290,7 @@ export default function Dashboard() {
                                     ) : (
                                       <tr>
                                         <td colSpan={5} className="py-3 px-4 text-center text-slate-400 font-medium">
-                                          No individual batch entry recorded for this product.
+                                          No active available batch in stock.
                                         </td>
                                       </tr>
                                     )}

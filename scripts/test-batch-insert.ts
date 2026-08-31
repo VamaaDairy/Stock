@@ -16,7 +16,7 @@ async function checkQuantitiesAreZero() {
     })
   })
 
-  console.log(`✅ All ${dashboardData.reduce((acc, c) => acc + c.products.length, 0)} products checked. Non-zero entries count: ${nonZeroCount}`)
+  console.log(`All ${dashboardData.reduce((acc, c) => acc + c.products.length, 0)} products checked. Non-zero entries count: ${nonZeroCount}`)
 }
 
 checkQuantitiesAreZero().catch(console.error)

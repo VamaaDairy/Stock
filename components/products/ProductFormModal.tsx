@@ -97,8 +97,8 @@ export default function ProductFormModal({
       <DialogTrigger
         className={
           isEditing
-            ? "h-8 text-xs font-semibold bg-gradient-to-br from-[#4A6FA5] to-[#3E5FA0] text-white border border-transparent hover:brightness-110 px-3 rounded-md flex items-center gap-1 transition-colors shadow-xs"
-            : "h-10 px-4 font-bold bg-gradient-to-br from-[#4A6FA5] to-[#3E5FA0] text-white border border-transparent hover:brightness-110 rounded-md flex items-center gap-2 transition-colors shadow-xs"
+            ? "h-8 text-xs font-bold bg-[#1e40af] hover:bg-[#1d4ed8] text-white px-3 rounded-lg flex items-center gap-1.5 shadow-sm cursor-pointer"
+            : "h-9 px-3.5 text-xs font-bold bg-[#1e40af] hover:bg-[#1d4ed8] text-white rounded-lg flex items-center gap-1.5 shadow-sm cursor-pointer"
         }
       >
         {isEditing ? (

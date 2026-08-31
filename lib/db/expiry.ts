@@ -84,8 +84,8 @@ export async function syncAndGetExpiredStock(): Promise<ExpiredStockItem[]> {
       JOIN daily_metrics dm ON dm.batch_id = b.id
       GROUP BY b.product_id, b.batch_number
       HAVING (
-        (MAX(b.ubd) IS NOT NULL AND MAX(b.ubd) < ?) OR
-        (MAX(b.expiry_date) IS NOT NULL AND MAX(b.expiry_date) < ?)
+        (MAX(b.ubd) IS NOT NULL AND MAX(b.ubd) <= ?) OR
+        (MAX(b.expiry_date) IS NOT NULL AND MAX(b.expiry_date) <= ?)
       ) AND SUM(dm.closing_total) > 0
       ORDER BY MAX(b.ubd) ASC, p.category, p.name
     `,
