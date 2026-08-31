@@ -18,13 +18,13 @@ export async function middleware(req: NextRequest) {
     pathname.startsWith("/forgot-password") ||
     pathname.startsWith("/reset-password")
   ) {
-    // If already logged in, redirect to dashboard (unless on reset-password)
+    // If already logged in, redirect to home (unless on reset-password)
     if (pathname.startsWith("/login") || pathname.startsWith("/forgot-password")) {
       const token = req.cookies.get("session")?.value
       if (token) {
         const payload = await verifySession(token)
         if (payload) {
-          return NextResponse.redirect(new URL("/dashboard", req.url))
+          return NextResponse.redirect(new URL("/", req.url))
         }
       }
     }

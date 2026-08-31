@@ -21,7 +21,7 @@ export default function SignupPage() {
       body: JSON.stringify({ name, email, password, inviteCode }),
     })
     const json = await res.json()
-    if (json.success) router.push("/dashboard")
+    if (json.success) router.push("/")
     else setError(json.error || "Signup failed")
   }
 
