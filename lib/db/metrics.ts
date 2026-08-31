@@ -395,7 +395,14 @@ export async function recordSaleEntry(input: {
   const inputUnit = (input.unit || productUnit).toUpperCase().trim()
 
   if (pcsPerCrt > 1 && (inputUnit === "CRT" || inputUnit === "CBX")) {
-    if (saleCrt > 0 && (saleCrt % 1 !== 0 || (saleTotal === saleCrt && salePc === 0))) {
+    if (salePc > 0 && saleCrt === 0) {
+      // Explicit pieces passed (e.g. from macro PCS_QTY_COL)
+      const totalPcs = Math.round(salePc)
+      saleCrt = Math.floor(totalPcs / pcsPerCrt)
+      salePc = totalPcs % pcsPerCrt
+      saleTotal = totalPcs
+    } else if (saleCrt > 0 && (saleCrt % 1 !== 0 || (saleTotal === saleCrt && salePc === 0))) {
+      // Explicit cartons passed (integer or decimal, e.g. 5 or 5.25)
       const totalPcs = Math.round(saleCrt * pcsPerCrt)
       saleCrt = Math.floor(totalPcs / pcsPerCrt)
       salePc = totalPcs % pcsPerCrt
