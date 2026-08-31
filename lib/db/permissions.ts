@@ -2,6 +2,7 @@ import { turso } from "@/lib/turso"
 import type { Role } from "./users"
 
 export type PageKey =
+  | "home"
   | "dashboard"
   | "production"
   | "sales"
@@ -12,9 +13,9 @@ export type PageKey =
 
 // Default permissions for each role
 const DEFAULT_PERMISSIONS: Record<Role, PageKey[]> = {
-  admin: ["dashboard", "production", "sales", "sales-return", "products", "about", "settings"],
-  manager: ["dashboard", "production", "sales", "sales-return", "products", "about"],
-  viewer: ["dashboard", "products", "about"],
+  admin: ["home", "dashboard", "production", "sales", "sales-return", "products", "about", "settings"],
+  manager: ["home", "dashboard", "production", "sales", "sales-return", "products", "about"],
+  viewer: ["home", "dashboard", "products", "about"],
 }
 
 export async function ensurePermissionsTable() {
@@ -32,12 +33,21 @@ export async function ensurePermissionsTable() {
   const c = (count.rows[0] as unknown as { c: number }).c
   if (c === 0) {
     await seedDefaultPermissions()
+  } else {
+    // Ensure home permission is enabled for all existing roles
+    const roles: Role[] = ["admin", "manager", "viewer"]
+    for (const role of roles) {
+      await turso.execute({
+        sql: "INSERT OR IGNORE INTO role_permissions (role, page, can_access) VALUES (?, 'home', 1)",
+        args: [role],
+      })
+    }
   }
 }
 
 async function seedDefaultPermissions() {
   const allPages: PageKey[] = [
-    "dashboard", "production", "sales", "sales-return", "products", "about", "settings",
+    "home", "dashboard", "production", "sales", "sales-return", "products", "about", "settings",
   ]
   const roles: Role[] = ["admin", "manager", "viewer"]
   for (const role of roles) {

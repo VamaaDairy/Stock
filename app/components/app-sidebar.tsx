@@ -105,10 +105,10 @@ export function AppSidebar() {
           ALL_PAGES.forEach((p) => { allAllowed[p.key] = true })
           setPermissions(allAllowed)
         } else {
-          const res = await fetch("/api/admin/permissions")
+          const res = await fetch("/api/auth/permissions")
           const pData = await res.json()
-          if (pData.success && pData.permissions?.[data.role]) {
-            setPermissions(pData.permissions[data.role])
+          if (pData.success && pData.permissions) {
+            setPermissions(pData.permissions)
           }
         }
       })

@@ -4,9 +4,10 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 
 type Role = "admin" | "manager" | "viewer"
-type PageKey = "dashboard" | "production" | "sales" | "sales-return" | "products" | "about" | "settings"
+type PageKey = "home" | "dashboard" | "production" | "sales" | "sales-return" | "products" | "about" | "settings"
 
 const ALL_PAGES: { key: PageKey; label: string }[] = [
+  { key: "home", label: "Home" },
   { key: "dashboard", label: "Dashboard" },
   { key: "production", label: "Production" },
   { key: "sales", label: "Sales" },
