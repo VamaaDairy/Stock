@@ -289,7 +289,18 @@ export async function upsertEntry(input: EntryInput) {
         crt = Math.floor(roundedTotal / pcsPerCrt)
         pc = roundedTotal % pcsPerCrt
         total = roundedTotal
+      } else if (total > 0) {
+        // Trust the client-provided total instead of re-deriving it from crt*pcsPerCrt + pc.
+        // The UI sends `pc` as the FULL quantity expressed in pieces (same value as `total`),
+        // not as a loose remainder on top of whole crates — so recomputing total from
+        // crt*pcsPerCrt + pc here double-counted the entry (e.g. 24 becoming 48).
+        const roundedTotal = Math.round(total)
+        crt = Math.floor(roundedTotal / pcsPerCrt)
+        pc = roundedTotal % pcsPerCrt
+        total = roundedTotal
       } else {
+        // No total provided at all (e.g. legacy/imported rows) — this is the only case
+        // where `pc` should be treated as a genuine loose-piece remainder to add on top.
         total = Math.round(crt * pcsPerCrt + pc)
         crt = Math.floor(total / pcsPerCrt)
         pc = total % pcsPerCrt
