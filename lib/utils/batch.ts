@@ -72,14 +72,14 @@ const PRODUCT_CODE_BY_ID: Record<string, string> = {
   "35": "L",  // Gaia Premium Desi Ghee 200ml JAR
   "36": "L",  // Gaia Premium Desi Ghee 500ml JAR
   "37": "L",  // Gaia Premium Desi Ghee 1L JAR
-  "38": "L",  // Gaia Premium Desi Ghee 5L JAR
+  "38": "W",  // Gaia Ghee Ceka Pack 1ltr
   "39": "L",  // GAIA GHEE CEKA 1L
   "40": "M",  // Gaia Cow Ghee 200ml JAR
   "41": "M",  // Gaia Cow Ghee 500ml JAR
   "42": "M",  // GAIA COW GHEE JAR 1L
   "43": "M",  // GAIA COW GHEE CEKA 1L
   "44": "L",  // GAIA PREMIUM GHEE TIN 15kg
-  "45": "L",  // Gaia Premium Desi Ghee CEKA 900ml
+  "45": "X",  // Gaia Cow Ghee Ceka Pack 1ltr
   "46": "M",  // Gaia Pure Cow Ghee CEKA 900ml
 
   // Rabdi & Shrikhand
@@ -98,8 +98,8 @@ const PRODUCT_CODE_BY_ID: Record<string, string> = {
 // 80g = Q, 180ml = A, 200g/ml = J, 400g = K, 500g/ml = L, 1kg/1L = M, 5kg/5L = N, 15kg = O
 const SIZE_CODE_BY_ID: Record<string, string> = {
   // Milk
-  "1": "L",   // 500ml → L
-  "2": "L",   // 500ml → L
+  "1": "D",   // 500ml → D
+  "2": "D",   // 500ml → D
 
   // UHT Milk
   "3": "Q",   // 110ml → Q
