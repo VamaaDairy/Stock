@@ -143,8 +143,11 @@ export function calcUBDPercent(
 
   if (!totalDays || totalDays <= 0) return null
 
+  // Shelf life percentage calculation: reduce count to (difference - 1), e.g. 17 -> 16
+  const adjustedTotalDays = totalDays > 1 ? totalDays - 1 : totalDays
+
   const daysLeft = Math.round((ubdDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
-  return Math.round((daysLeft / totalDays) * 1000) / 10
+  return Math.round((daysLeft / adjustedTotalDays) * 1000) / 10
 }
 
 /**

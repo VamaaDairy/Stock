@@ -13,7 +13,8 @@ export function calcUBDPercent(
   const ubdDate = new Date(ubd)
   ubdDate.setHours(0, 0, 0, 0)
   const daysLeft = Math.round((ubdDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
-  return Math.round((daysLeft / shelfLifeDays) * 1000) / 10 // 1 decimal place
+  const adjustedTotalDays = shelfLifeDays > 1 ? shelfLifeDays - 1 : shelfLifeDays
+  return Math.round((daysLeft / adjustedTotalDays) * 1000) / 10 // 1 decimal place
 }
 
 export function formatUBDPercent(pct: number | null): string {
