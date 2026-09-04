@@ -69,8 +69,8 @@ export const config = {
      * - _next/static
      * - _next/image
      * - favicon.ico
-     * - public assets
+     * - public assets (.svg, .png, .jpg, .jpeg, .gif, .webp, .css, .js, .ico)
      */
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|_next/data|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|css|js|ico)$).*)",
   ],
 }

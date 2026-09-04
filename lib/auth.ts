@@ -1,5 +1,6 @@
 import { SignJWT, jwtVerify } from "jose"
-import type { Role } from "./db/users"
+
+export type Role = "admin" | "manager" | "viewer"
 
 const secret = new TextEncoder().encode(process.env.JWT_SECRET || "dev-secret-change-me")
 
