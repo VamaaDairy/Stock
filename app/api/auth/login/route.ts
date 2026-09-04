@@ -18,10 +18,11 @@ export async function POST(req: NextRequest) {
   }
 
   // Force admin role for the admin email always
-  const role = email === ADMIN_EMAIL ? "admin" : user.role
+  const cleanEmail = email.trim().toLowerCase()
+  const role = cleanEmail === ADMIN_EMAIL.toLowerCase() ? "admin" : user.role
 
   const token = await createSession(user.id, user.email, role)
   const res = NextResponse.json({ success: true, name: user.name, role })
-  res.cookies.set("session", token, { httpOnly: true, path: "/", maxAge: 60 * 60 * 24 * 7 })
+  res.cookies.set("session", token, { httpOnly: true, path: "/", maxAge: 60 * 60 * 24 * 7, sameSite: "lax" })
   return res
 }

@@ -92,7 +92,7 @@ export default function LoginPage() {
       })
       const json = await res.json()
       if (json.success) {
-        router.push("/")
+        window.location.href = "/"
       } else {
         setErrors({ general: json.error || "Login failed. Please check your credentials." })
       }
